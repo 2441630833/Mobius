@@ -1,0 +1,12 @@
+[submodule "vscode"]
+	path = vscode
+	url = https://github.com/2441630833/Mobius-vscode.git
+	branch = mobius-custom
+[submodule "continue"]
+	path = continue
+	url = https://github.com/2441630833/Mobius-continue.git
+	branch = mobius-custom
+[submodule "hermes-agent"]
+	path = hermes-agent
+	url = https://github.com/NousResearch/hermes-agent.git
+	branch = main

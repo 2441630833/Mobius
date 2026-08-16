@@ -1,0 +1,6 @@
+#!/bin/sh
+# Shim: Git for Windows invokes this shell script. It delegates to
+# the PowerShell implementation in pre-commit.ps1 alongside it.
+hook_dir="$(dirname "$0")"
+hook_ps1_win="$(cygpath -w "$hook_dir/pre-commit.ps1" 2>/dev/null || echo "$hook_dir/pre-commit.ps1")"
+exec powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$hook_ps1_win"

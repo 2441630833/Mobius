@@ -1,0 +1,35 @@
+---
+description: After confirming a task, execute all edits immediately — never ask the user to send continue/修改
+alwaysApply: true
+---
+
+# Execute Immediately — No "Continue" Gate
+
+## Hard rule
+
+Once you know what to change (file list, URLs, plan, "需要修改的内容"), **call edit/tool APIs in the same turn**. Do not stop for user confirmation.
+
+User confirmation of the *task* is already given by their request. Listing the plan is **not** a stopping point.
+
+## Forbidden endings (any language)
+
+Never end a turn with phrasing like:
+
+- 请发送「继续修改」/「继续」/「确认」
+- Please reply "continue" / "go ahead" / "confirm"
+- "下一步：请回复…" / "Shall I proceed?"
+- "I will wait for you to say…"
+- Delivering only a checklist of files to change, then asking permission to edit
+
+If you catch yourself drafting such a sentence, **delete it and make the first edit tool call instead**.
+
+## Required flow
+
+1. Understand the request (briefly if needed).
+2. If a plan doc is required by `AGENTS.md`, write it.
+3. **Immediately** apply every change, verify, finish.
+4. Emit `TASK_COMPLETE` only when work is done — never after a plan-only turn.
+
+## Allowed questions (only)
+
+Ask the user only when blocked by a real missing input: secret, destructive consent, or a choice that cannot be inferred. Never ask for permission to perform edits you already know how to do.

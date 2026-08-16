@@ -1,0 +1,6 @@
+<Project>
+  <!-- Applied after vcxproj Configuration props; overrides node-gyp's SpectreMitigation=Spectre -->
+  <PropertyGroup>
+    <SpectreMitigation>false</SpectreMitigation>
+  </PropertyGroup>
+</Project>

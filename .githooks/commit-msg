@@ -1,0 +1,9 @@
+#!/bin/sh
+# Shim: Git for Windows invokes this shell script. It delegates to
+# the PowerShell implementation in commit-msg.ps1 alongside it.
+# We convert POSIX paths to Windows paths before invoking powershell.exe
+# because the commit-message file path passed by git is a POSIX path.
+hook_dir="$(dirname "$0")"
+msg_file_win="$(cygpath -w "$1" 2>/dev/null || echo "$1")"
+hook_ps1_win="$(cygpath -w "$hook_dir/commit-msg.ps1" 2>/dev/null || echo "$hook_dir/commit-msg.ps1")"
+exec powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$hook_ps1_win" "$msg_file_win"

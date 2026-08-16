@@ -1,0 +1,33 @@
+node_modules/
+dist/
+out/
+*.log
+.env
+config/continue-config.local.yaml
+.DS_Store
+Thumbs.db
+continue/node_modules/
+continue_backup_build/
+vscode/node_modules/
+vscode_backup_build/
+vscode_stale_locked/
+vscode/out/
+vscode/.build/
+VSCode-win32-x64/
+vscode/extensions/continue/
+resources/ollama/bin/
+resources/ollama/bin-amd64/
+resources/ollama/bin-arm64/
+resources/ollama/models/
+resources/ollama/home/
+resources/ollama/_extract_tmp*/
+resources/ollama/*.zip
+resources/ollama/.bundled-version
+
+# Unrelated embedded repos kept locally only (not part of the open-source release)
+godot/
+rsi-test/
+
+# Local caches and temporary debug files
+.cache/
+.tmp_probe_search.mjs

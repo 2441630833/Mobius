@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mobius</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="bg-grid" aria-hidden="true"></div>
+  <div class="bg-glow bg-glow-a" aria-hidden="true"></div>
+  <div class="bg-glow bg-glow-b" aria-hidden="true"></div>
+
+  <header class="header">
+    <div class="logo">
+      <img src="/static/images/logo.png" alt="" class="logo-img" width="36" height="36" />
+      <span class="logo-text">Mobius</span>
+    </div>
+    <nav class="nav">
+      <a href="#features">Features</a>
+      <a href="#playground">Playground</a>
+      <a href="#start">Quick Start</a>
+    </nav>
+    <button type="button" class="btn btn-primary btn-sm" id="btn-open-playground">Try demo</button>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-badge">VS Code OSS + Continue Agent</div>
+      <h1>Build with an AI that <span class="gradient-text">acts</span>, not asks</h1>
+      <p class="hero-lead">
+        A Cursor-like IDE fork: autonomous agent mode, inline edits, and a codebase-aware assistant —
+        all in your own branded editor.
+      </p>
+      <div class="hero-actions">
+        <button type="button" class="btn btn-primary" id="btn-launch-info">Launch IDE</button>
+        <a class="btn btn-ghost" href="#start">Setup guide</a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat"><strong>Agent</strong><span>Tool use enabled</span></div>
+        <div class="stat"><strong>Continue</strong><span>Chat + edit + apply</span></div>
+        <div class="stat"><strong>Local</strong><span>Your API keys</span></div>
+      </div>
+    </section>
+
+    <section class="features" id="features">
+      <h2>What you get</h2>
+      <div class="feature-grid">
+        <article class="card">
+          <div class="card-icon">⚡</div>
+          <h3>Agent mode</h3>
+          <p>Edits files, runs terminal commands, and searches the codebase — like Cursor Agent, not a Q&amp;A bot.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🧠</div>
+          <h3>Continue built in</h3>
+          <p>Chat, inline edit, autocomplete, and diff apply wired into the VS Code fork sidebar.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🔐</div>
+          <h3>Your models</h3>
+          <p>Configure OpenAI-compatible endpoints via <code>.env</code> and sync to Continue.</p>
+        </article>
+        <article class="card">
+          <div class="card-icon">🌐</div>
+          <h3>This dashboard</h3>
+          <p>Explore the project in the browser, try the demo chat, and copy launch commands.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="playground" id="playground">
+      <div class="playground-header">
+        <h2>Agent playground</h2>
+        <p>Simulated agent flow — no API key required. Type a task and watch agent mode respond.</p>
+      </div>
+      <div class="playground-shell">
+        <aside class="sidebar">
+          <div class="sidebar-title">Project</div>
+          <ul class="tree">
+            <li><span class="folder">physical_AI_IDE/</span></li>
+            <li class="indent"><span class="folder">vscode/</span></li>
+            <li class="indent"><span class="folder">continue/</span></li>
+            <li class="indent"><span class="folder">web/</span></li>
+            <li class="indent"><span class="file">config/continue-config.yaml</span></li>
+            <li class="indent"><span class="file">package.json</span></li>
+          </ul>
+        </aside>
+        <div class="chat-panel">
+          <div class="chat-toolbar">
+            <span class="mode-pill">Agent</span>
+            <span class="model-pill">claude-sonnet-4-6</span>
+          </div>
+          <div class="chat-messages" id="chat-messages" role="log" aria-live="polite"></div>
+          <form class="chat-input" id="chat-form">
+            <input
+              type="text"
+              id="chat-input"
+              placeholder="e.g. Create a beautiful web UI for this project"
+              autocomplete="off"
+            />
+            <button type="submit" class="btn btn-primary">Send</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section class="start" id="start">
+      <h2>Quick start</h2>
+      <ol class="steps">
+        <li>
+          <span class="step-num">1</span>
+          <div>
+            <h3>Configure API</h3>
+            <pre><code>copy .env.example .env
+# Set OPENAI_API_KEY</code></pre>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">2</span>
+          <div>
+            <h3>Build (first time)</h3>
+            <pre><code>npm run install:continue
+npm run build:vscode</code></pre>
+          </div>
+        </li>
+        <li>
+          <span class="step-num">3</span>
+          <div>
+            <h3>Launch</h3>
+            <pre><code>npm start          # Mobius
+npm run web        # This page (port 5173)
+npm run sync:config # Push .env → Continue</code></pre>
+          </div>
+        </li>
+      </ol>
+      <div class="tip card">
+        <strong>Agent mode tip:</strong> In Continue sidebar, select <em>Agent</em> (not Chat). Chat mode has no tools and will ask questions instead of editing files.
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>Mobius · MIT</span>
+    <span>VS Code OSS + Continue</span>
+  </footer>
+
+  <dialog class="modal" id="launch-modal">
+    <div class="modal-content">
+      <button type="button" class="modal-close" id="modal-close" aria-label="Close">&times;</button>
+      <h3>Launch Mobius</h3>
+      <p>Run from the project root in PowerShell:</p>
+      <pre><code id="launch-cmd">npm start</code></pre>
+      <button type="button" class="btn btn-primary" id="copy-launch">Copy command</button>
+    </div>
+  </dialog>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

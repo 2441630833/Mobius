@@ -1,0 +1,13 @@
+# Auto-loaded via .git/config [include] path = ../.gitconfig
+# After `git clone`, run: git config --local include.path ../.gitconfig
+[core]
+	hooksPath = .githooks
+	autocrlf = false
+	quotepath = false
+	longpaths = true
+[pull]
+	rebase = false
+[merge]
+	ff = only
+[init]
+	defaultBranch = main

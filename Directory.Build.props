@@ -1,0 +1,8 @@
+<Project>
+  <!-- node-gyp native addons: default to non-Spectre CRT. The Spectre-mitigated
+       v143 libs must still be installed because some vcxproj files explicitly
+       request them; this only prevents every project from defaulting to Spectre. -->
+  <PropertyGroup>
+    <SpectreMitigation>false</SpectreMitigation>
+  </PropertyGroup>
+</Project>
