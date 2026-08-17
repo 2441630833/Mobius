@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "godot": {
+      "command": "node",
+      "args": ["scripts/godot-mcp-server.js"],
+      "env": { "NO_COLOR": "1" }
+    }
+  }
+}

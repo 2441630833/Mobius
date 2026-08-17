@@ -28,6 +28,10 @@ resources/ollama/.bundled-version
 godot/
 rsi-test/
 
+# Game Dev mode: downloaded Godot engine + pointer file (gitignored, regenerable)
+tools/godot/
+game-dev/.godot/
+
 # Local caches and temporary debug files
 .cache/
 .tmp_probe_search.mjs
