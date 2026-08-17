@@ -20,7 +20,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { spawnSync } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const readline = require('readline');
 
 const SERVER_NAME = 'mobius-godot';
@@ -278,6 +278,46 @@ function toolGodotTest(args) {
   };
 }
 
+// Launch a *visible* Godot window (editor or running game) so the user can
+// preview the agent's work. The process is detached and unref'd so it does
+// not block the MCP server; Godot hot-reloads .gd/.tscn files the agent keeps
+// editing while the window stays open.
+function toolGodotPreview(args) {
+  const bin = resolveGodot();
+  if (!bin) {
+    return { isError: true, text: 'Godot not found. Run: npm run godot:setup -- -Install' };
+  }
+  const proj = projectPath(args.project);
+  if (!fs.existsSync(path.join(proj, 'project.godot'))) {
+    return { isError: true, text: `No project.godot at ${proj}. Run godot_project_init first.` };
+  }
+  const argv = args.editor
+    ? ['--editor', '--path', proj]
+    : ['--path', proj, ...(args.scene ? [args.scene] : [])];
+  try {
+    const child = spawn(bin, argv, {
+      cwd: findWorkspaceRoot(),
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: false,
+      env: { ...process.env, NO_COLOR: '0' },
+    });
+    child.unref();
+    return {
+      isError: false,
+      text: [
+        `Opened ${args.editor ? 'editor' : 'game'} window (PID ${child.pid}).`,
+        `Project: ${proj}`,
+        args.editor
+          ? 'The editor is open; it auto-reimports changed assets and hot-reloads scripts you keep editing.'
+          : 'The game is running; close the window when done. Re-run godot_preview after edits to relaunch.',
+      ].join('\n'),
+    };
+  } catch (e) {
+    return { isError: true, text: `Failed to launch Godot window: ${e && e.message ? e.message : e}` };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Tool registry
 // ---------------------------------------------------------------------------
@@ -330,6 +370,18 @@ const TOOLS = [
       },
     },
   },
+  {
+    name: 'godot_preview',
+    description: 'Launch a visible Godot window (editor or running game) for live visual preview. The window hot-reloads files the agent keeps editing.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project: { type: 'string', description: 'Project folder name (default: game-dev).' },
+        editor: { type: 'boolean', description: 'Open the editor (true) instead of running the game (default false).' },
+        scene: { type: 'string', description: 'Optional scene path to run, e.g. res://main.tscn.' },
+      },
+    },
+  },
 ];
 
 const TOOL_MAP = {
@@ -338,6 +390,7 @@ const TOOL_MAP = {
   godot_import: toolGodotImport,
   godot_run: toolGodotRun,
   godot_test: toolGodotTest,
+  godot_preview: toolGodotPreview,
 };
 
 // ---------------------------------------------------------------------------
@@ -409,11 +462,12 @@ function handle(msg) {
 
 // CLI conveniences so a human can drive the same code paths as the agent.
 function runCli() {
-  const flag = ['--init', '--import', '--run', '--test'].find((f) => process.argv.includes(f));
+  const flag = ['--init', '--import', '--run', '--test', '--preview'].find((f) => process.argv.includes(f));
   const out = flag === '--init' ? toolGodotProjectInit({})
     : flag === '--import' ? toolGodotImport({})
     : flag === '--run' ? toolGodotRun({})
     : flag === '--test' ? toolGodotTest({})
+    : flag === '--preview' ? toolGodotPreview({})
     : null;
   if (out) {
     console.log(out.text);
