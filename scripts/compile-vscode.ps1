@@ -36,6 +36,9 @@ $env:VSCODE_SKIP_NODE_VERSION_CHECK = "1"
 
 Write-Host "Compiling VS Code (NODE_OPTIONS=$env:NODE_OPTIONS)..." -ForegroundColor Cyan
 npm run compile-client
+if ($LASTEXITCODE -ne 0) { Pop-Location; exit $LASTEXITCODE }
+Write-Host "Compiling built-in extensions (git, git-base, ...)..." -ForegroundColor Cyan
+npm run gulp compile-extensions
 $exitCode = $LASTEXITCODE
 Pop-Location
 exit $exitCode

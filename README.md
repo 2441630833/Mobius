@@ -43,7 +43,7 @@ The end result: an IDE whose Agent grows more capable the longer you use it — 
 
 - **Built on the VS Code OSS fork** — full editor experience, extensions, keybindings, themes.
 - **Continue built in** — chat, inline editing, `@codebase` repository indexing, autocomplete.
-- **Local Ollama built in** — embedding (`nomic-embed-text`) and GLM-OCR image preprocessing run fully offline; chat still uses cloud models.
+- **Local embeddings + OCR** — `@codebase` uses in-process `transformers.js` (`all-MiniLM-L6-v2`); GLM-OCR still runs on bundled Ollama. Chat uses cloud models.
 - **Skill system** — file-based Skills in `.agents/skills/`, hot-reloadable and shareable via git.
 - **Intent-driven Skill matching** — hybrid recall (embedding + lexical) scores Skills for every query and preloads the top matches.
 - **Pluggable agent harness (roadmap)** — Continue is currently the built-in and only harness; the roadmap extracts a thin harness abstraction so multiple agent engines (such as DeepSeek's agent harness) can coexist as plugins that complement Continue, rather than replacing it.
@@ -205,18 +205,17 @@ Any OpenAI-compatible endpoint works (DeepSeek, SiliconFlow, Ollama, Azure OpenA
 
 ---
 
-## Bundled Ollama (offline embedding + OCR)
+## Local embeddings + bundled Ollama OCR
 
-Mobius ships Ollama inside the installer so the following two features work without a separate install:
-
-- **`@codebase` repository embedding**: `nomic-embed-text`
-- **Image OCR**: `glm-ocr` — when you attach an image in the Agent, Mobius first runs OCR locally, then injects the `<ocr-extract>` text into the conversation
+- **`@codebase` repository embedding**: in-process `transformers.js` (`all-MiniLM-L6-v2`), same approach as Cursor — no Ollama round-trip, so concurrent agents do not stall on a shared llama.cpp server.
+- **Image OCR**: bundled Ollama `glm-ocr` — when you attach an image in the Agent, Mobius first runs OCR locally, then injects the `<ocr-extract>` text into the conversation
 
 Chat itself always uses the cloud model configured in `.env`; no chat model runs locally.
 
 ```powershell
-npm run bundle:ollama    # download amd64 + arm64 runtimes and models
-npm run verify:ollama    # validate the bundle before release
+npm run bundle:ollama    # download amd64 + arm64 runtimes + glm-ocr
+npm run verify:ollama    # validate the Ollama OCR bundle before release
+npm run verify:minilm    # smoke-test built-in MiniLM ONNX embeddings
 ```
 
 If GitHub downloads are blocked, point the script at local zip files:
@@ -370,3 +369,7 @@ By submitting a contribution you agree to license it under the MIT License.
 - **Ollama** (bundled runtime) — MIT
 
 The bundled Ollama models and third-party extensions follow their respective upstream licenses.
+
+---
+
+Mobius supports two interaction modes: **Agent** (autonomous coding) and **Game** (Godot game development).

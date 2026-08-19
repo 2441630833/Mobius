@@ -338,6 +338,7 @@ function Repair-NamedModelBlock {
         [string]$ApiBase,
         [string]$ApiKey = $null,
         [switch]$RemoveApiKey,
+        [switch]$RemoveApiBase,
         [switch]$RemoveUseResponsesApi
     )
 
@@ -367,6 +368,7 @@ function Repair-NamedModelBlock {
             }
             if ($RemoveApiKey -and $line -match '^\s+apiKey:\s*') { continue }
             if ($RemoveUseResponsesApi -and $line -match '^\s+useResponsesApi:\s*') { continue }
+            if ($RemoveApiBase -and $line -match '^\s+apiBase:\s*') { continue }
             if ($line -match '^\s+provider:\s*') {
                 $out.Add(($line -replace 'provider:\s*.+', "provider: $Provider"))
                 continue
@@ -376,6 +378,7 @@ function Repair-NamedModelBlock {
                 continue
             }
             if ($line -match '^\s+apiBase:\s*') {
+                if (-not $ApiBase) { continue }
                 $out.Add(($line -replace 'apiBase:\s*.+', "apiBase: $ApiBase"))
                 continue
             }
@@ -445,9 +448,8 @@ function Repair-EmbedRoleModelBlock([string]$Yaml) {
             }
             if ($rolesEmbed) {
                 $out.Add("  - name: local-embed")
-                $out.Add("    provider: ollama")
-                $out.Add("    model: nomic-embed-text")
-                $out.Add("    apiBase: $script:OllamaApiBaseLocalhost")
+                $out.Add("    provider: transformers.js")
+                $out.Add("    model: all-MiniLM-L6-v2")
                 $out.Add("    roles:")
                 $out.Add("      - embed")
                 $out.Add("")
@@ -467,10 +469,10 @@ function Ensure-OllamaEmbedBlock([string]$yaml) {
         return Repair-NamedModelBlock `
             -Yaml $yaml `
             -BlockName 'local-embed' `
-            -Provider 'ollama' `
-            -Model 'nomic-embed-text' `
-            -ApiBase $script:OllamaApiBaseLocalhost `
+            -Provider 'transformers.js' `
+            -Model 'all-MiniLM-L6-v2' `
             -RemoveApiKey `
+            -RemoveApiBase `
             -RemoveUseResponsesApi
     }
 
@@ -480,9 +482,8 @@ function Ensure-OllamaEmbedBlock([string]$yaml) {
     $embedBlock = @"
 
   - name: local-embed
-    provider: ollama
-    model: nomic-embed-text
-    apiBase: $script:OllamaApiBaseLocalhost
+    provider: transformers.js
+    model: all-MiniLM-L6-v2
     roles:
       - embed
 "@
@@ -704,9 +705,8 @@ if ($yaml -notmatch '(?m)- name:\s*local-embed') {
     $embedBlock = @"
 
   - name: local-embed
-    provider: ollama
-    model: nomic-embed-text
-    apiBase: $script:OllamaApiBaseLocalhost
+    provider: transformers.js
+    model: all-MiniLM-L6-v2
     roles:
       - embed
 "@
@@ -721,5 +721,5 @@ Write-CanonicalEnvFromSource $sourceEnvPath
 Set-EmbedModelSelection
 Set-PrimaryModelSelection $selectionModel
 Write-Host "Synced $($profiles.Count) profile(s); default '$selectionModel' from $(Split-Path $sourceEnvPath -Leaf) -> $ConfigFile" -ForegroundColor Green
-Write-Host "Ollama embed: local-embed (nomic-embed-text @ bundled $script:OllamaApiBase)" -ForegroundColor Cyan
+Write-Host "In-process embed: local-embed (transformers.js all-MiniLM-L6-v2)" -ForegroundColor Cyan
 Write-Host "Ollama OCR: glm-ocr (Agents image preprocess only)" -ForegroundColor Cyan

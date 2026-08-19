@@ -43,7 +43,7 @@ Mobius 在 [VS Code](https://github.com/microsoft/vscode) 分支的基础上，�
 
 - **基于 VS Code OSS 分支**——完整的编辑器体验、扩展、快捷键、主题。
 - **内置 Continue**——对话、内联编辑、`@codebase` 代码库索引、自动补全。
-- **内置本地 Ollama**——embedding（`nomic-embed-text`）与 GLM-OCR 图像预处理完全离线；对话仍走云端模型。
+- **本地 embedding + OCR**——`@codebase` 使用进程内 `transformers.js`（`all-MiniLM-L6-v2`）；GLM-OCR 仍走内置 Ollama。对话走云端模型。
 - **Skill 系统**——基于文件的 Skill，位于 `.agents/skills/`，支持热加载、通过 git 分享。
 - **意图驱动的 Skill 匹配**——混合召回（embedding + 词法）针对每次提问给 Skill 打分并预加载 Top 匹配。
 - **可插拔 agent harness（路线图）**——目前 Continue 是内置且唯一的 harness；路线图上会抽出一层 harness 抽象，让多个 agent 引擎（如 DeepSeek 的 agent harness）可以插拔共存、与 Continue 相辅相成，而不是替换。
@@ -205,18 +205,17 @@ npm run sync:config
 
 ---
 
-## 内置 Ollama（离线 embedding + OCR）
+## 本地 embedding + 内置 Ollama OCR
 
-Mobius 在安装包中自带 Ollama，让以下两项功能无需用户单独安装：
-
-- **`@codebase` 代码库 embedding**：`nomic-embed-text`
-- **图像 OCR**：`glm-ocr`——当你在 Agent 中附加图片时，Mobius 先在本地跑 OCR，再把 `<ocr-extract>` 文本注入对话
+- **`@codebase` 代码库 embedding**：进程内 `transformers.js`（`all-MiniLM-L6-v2`），与 Cursor 同类做法——不再走 Ollama，多 Agent 并发时不会抢占同一个 llama.cpp。
+- **图像 OCR**：内置 Ollama `glm-ocr`——当你在 Agent 中附加图片时，Mobius 先在本地跑 OCR，再把 `<ocr-extract>` 文本注入对话
 
 对话本身始终使用 `.env` 中配置的云端模型；本地不跑对话模型。
 
 ```powershell
-npm run bundle:ollama    # 下载 amd64 + arm64 运行时与模型
-npm run verify:ollama    # 发布前校验 bundle
+npm run bundle:ollama    # 下载 amd64 + arm64 运行时与 glm-ocr
+npm run verify:ollama    # 发布前校验 Ollama OCR bundle
+npm run verify:minilm    # 冒烟测试内置 MiniLM ONNX embedding
 ```
 
 若 GitHub 下载被墙，可把本地 zip 路径指给脚本：

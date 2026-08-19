@@ -3,7 +3,7 @@
 ```mermaid
 flowchart TD
   M[当前轮用户 prompt<br/>extractSkillRoutingQuery] --> L[Lexical 召回 Top-8<br/>rankSkillsForMessage]
-  M --> E[Embed 当前轮 prompt<br/>nomic-embed-text]
+  M --> E[Embed 当前轮 prompt<br/>in-process hashing embedder]
   E --> S[Skill 向量索引<br/>SKILL.md 预计算+缓存]
   S --> A[Embedding 召回 Top-8<br/>cosine similarity]
   L --> F[Light Ranker 融合<br/>0.45×embed + 0.55×lexical]
@@ -18,14 +18,14 @@ flowchart TD
 |------|------|
 | **Query** | 只用 `request.message`（当前轮 prompt），**不含** chat history |
 | Lexical 召回 | 关键词 / 中英文意图正则 / token 重叠 / `skillMatchesIntentHint` 精确段匹配 |
-| Embedding 召回 | `nomic-embed-text` cosine Top-8；skill 向量来自 SKILL.md，非历史消息 |
+| Embedding 召回 | 进程内 hashing embed cosine Top-8；skill 向量来自 SKILL.md，非历史消息 |
 | Light Ranker | `fused = 0.45×embed + 0.55×lexical` |
 | 意图域调整 | 检测 `design-ui` / `document-ppt` / `document-word` / `git-pr` / `mcp` 等，加分本域、减分/过滤离域 |
 | 纯向量降权 | 无 lexical 支持且与当前意图域不匹配的命中 ×0.4 |
 | 冲突过滤 | interview ↔ execution；design-ui ↔ document/git；单文档类型时 PPT ↔ Word 互斥 |
 | 输出 | 最多 3 个兼容 skill 注入 `<skill-context>` |
 
-Ollama embed 不可用时自动降级为纯 lexical，不阻塞 Agent。
+进程内 embed 不可用时自动降级为纯 lexical，不阻塞 Agent。
 
 ## 意图域示例
 

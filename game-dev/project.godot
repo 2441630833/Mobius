@@ -1,13 +1,28 @@
-; Engine configuration file (Godot 4)
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
 config_version=5
 
 [application]
 
-config/name="Mobius Game"
+config/name="Star Catcher"
+config/description="Mobius Game mode demo: move with arrows and collect 5 stars."
 run/main_scene="res://main.tscn"
 config/features=PackedStringArray("4.4")
+
+[display]
+
+window/size/viewport_width=640
+window/size/viewport_height=360
+window/stretch/mode="canvas_items"
 
 [rendering]
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.08, 0.1, 0.16, 1)

@@ -1,0 +1,20 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://star.gd" id="1_star"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_star"]
+radius = 12.0
+
+[node name="Star" type="Area2D" groups=["stars"]]
+collision_layer = 2
+collision_mask = 1
+monitoring = true
+monitorable = true
+script = ExtResource("1_star")
+
+[node name="Poly" type="Polygon2D" parent="."]
+color = Color(1, 0.85, 0.2, 1)
+polygon = PackedVector2Array(-12, -12, 12, -12, 12, 12, -12, 12)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_star")

@@ -1,8 +1,8 @@
-# Mobius -- verify / refresh bundled Ollama embed + OCR models
+# Mobius -- verify / refresh bundled Ollama OCR (embeddings are MiniLM ONNX)
 $ErrorActionPreference = "Stop"
 . "$PSScriptRoot\ollama-common.ps1"
 
-Write-Host "`n=== Ollama Embedding + OCR Setup ===" -ForegroundColor Cyan
+Write-Host "`n=== Ollama OCR Setup ===" -ForegroundColor Cyan
 
 Assert-OllamaBundled
 
@@ -10,21 +10,21 @@ Write-Host "Bundled Ollama: $(Get-OllamaExe) ($(Get-WindowsCpuArch))" -Foregroun
 Write-Host "Models dir    : $(Get-OllamaModelsDir)" -ForegroundColor Gray
 
 Start-BundledOllamaServer | Out-Null
-Remove-OllamaRetiredModels -Quiet
-Ensure-OllamaEmbedModel
+Remove-OllamaRetiredModels
 Ensure-OllamaOcrModel
 
-Write-Host "Verifying embed API..." -ForegroundColor Yellow
-if (-not (Test-OllamaEmbedApi)) {
-    Write-Host "WARNING: Embed API check failed. Is Ollama still running?" -ForegroundColor Yellow
+if (-not (Test-OllamaOcrModel)) {
+    Write-Host "[FAIL] OCR model $script:OllamaOcrModel not available" -ForegroundColor Red
     exit 1
 }
-Write-Host "Embed API OK" -ForegroundColor Green
+Write-Host "[ OK ] Local OCR model: $script:OllamaOcrModel" -ForegroundColor Green
 
 $Root = Get-ProjectRoot
+& (Join-Path $PSScriptRoot "ensure-minilm.ps1")
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 & (Join-Path $PSScriptRoot "sync-continue-config.ps1")
 
 Write-Host "`n=== Ollama Setup Complete ===" -ForegroundColor Green
-Write-Host "Embeddings model: local-embed ($script:OllamaEmbedModel)" -ForegroundColor White
-Write-Host "Local OCR model : $script:OllamaOcrModel" -ForegroundColor White
+Write-Host "Embeddings     : built-in MiniLM ONNX (transformers.js)" -ForegroundColor White
+Write-Host "Local OCR model: $script:OllamaOcrModel" -ForegroundColor White
 Write-Host "Next: reload Continue config in IDE, then re-index codebase`n" -ForegroundColor Cyan

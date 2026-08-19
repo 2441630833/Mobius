@@ -229,4 +229,4 @@ if ($binFiles.Count -gt 0) {
 }
 Write-Host "Version  : $version" -ForegroundColor White
 Write-Host "Size     : $([math]::Round($totalBytes / 1GB, 2)) GB (exe + bins)" -ForegroundColor White
-Write-Host "Includes : Mobius IDE + Continue + Ollama (amd64+arm64) + nomic-embed-text + glm-ocr`n" -ForegroundColor Gray
+Write-Host "Includes : Mobius IDE + Continue + Ollama (amd64+arm64) + glm-ocr + MiniLM ONNX`n" -ForegroundColor Gray

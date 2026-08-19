@@ -12,11 +12,12 @@ ui:
 models:
   # No default cloud provider on first launch — the Onboarding card prompts
   # the user to enter their own API key. Cloud models are added via Settings
-  # and persisted to ~/.continue/.env. Only the local embed model ships by default.
+  # and persisted to ~/.continue/.env. Embeddings run in-process (transformers.js
+  # all-MiniLM-L6-v2) so concurrent agents do not contend on bundled Ollama.
+  # Ollama remains for GLM-OCR only.
   - name: local-embed
-    provider: ollama
-    model: nomic-embed-text
-    apiBase: http://127.0.0.1:25137
+    provider: transformers.js
+    model: all-MiniLM-L6-v2
     roles:
       - embed
 

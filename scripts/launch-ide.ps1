@@ -35,11 +35,15 @@ if ($LASTEXITCODE) { exit $LASTEXITCODE }
 & "$Root\scripts\ensure-native-modules.ps1"
 if ($LASTEXITCODE) { exit $LASTEXITCODE }
 & "$Root\scripts\ensure-ollama.ps1"
+& "$Root\scripts\ensure-minilm.ps1"
+if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
 Write-Host "Launching Mobius..." -ForegroundColor Cyan
 Push-Location (Join-Path $Root "vscode")
 # NODE_OPTIONS is for Node build scripts only -- Electron rejects most NODE_OPTIONs at runtime.
 Remove-Item Env:NODE_OPTIONS -ErrorAction SilentlyContinue
+# Leftover from `ELECTRON_RUN_AS_NODE=1` (e.g. ad-hoc Electron-as-Node probes) breaks normal IDE launch.
+Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
 $env:VSCODE_SKIP_NODE_VERSION_CHECK = "1"
 # Agent tool superset needs GitHub.copilot-chat languageModelTools (read_file, replace_string_in_file, …).
 # Keep skipping GitHub.copilot (inline completions) to avoid clashing with Continue autocomplete.

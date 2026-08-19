@@ -1,10 +1,10 @@
 # Shared helpers for bundled Ollama (Mobius -- Option C, dual-arch)
 $ErrorActionPreference = "Stop"
 
-$script:OllamaEmbedModel = "nomic-embed-text"
 $script:OllamaOcrModel = "glm-ocr"
-# Chat models (qwen*) are retired -- Ollama is embed + OCR only.
+# Chat models (qwen*) and nomic-embed-text are retired -- Ollama is OCR only.
 $script:OllamaRetiredModels = @(
+    "nomic-embed-text",
     "qwen3.5:2b",
     "qwen3.5",
     "qwen3.5:4b",
@@ -18,6 +18,7 @@ $script:OllamaRetiredModels = @(
 )
 # Relative to manifests/registry.ollama.ai/ -- library/* or org/name paths.
 $script:OllamaRetiredManifestDirs = @(
+    "library\nomic-embed-text",
     "library\qwen3.5",
     "library\qwen3-vl",
     "library\qwen2.5-coder",
@@ -466,20 +467,6 @@ function Ensure-OllamaOcrModel {
     Invoke-OllamaCli -Arguments @("pull", $script:OllamaOcrModel)
 }
 
-function Test-OllamaEmbedModel {
-    try {
-        $resp = Invoke-RestMethod -Uri "$script:OllamaApiBase/api/tags" -TimeoutSec 5
-        foreach ($model in @($resp.models)) {
-            if ($model.name -eq $script:OllamaEmbedModel -or $model.name -like "$($script:OllamaEmbedModel)*") {
-                return $true
-            }
-        }
-        return $false
-    } catch {
-        return $false
-    }
-}
-
 function Invoke-OllamaCli {
     param([Parameter(Mandatory = $true)][string[]]$Arguments)
 
@@ -493,69 +480,6 @@ function Invoke-OllamaCli {
     if ($LASTEXITCODE -ne 0) {
         throw "ollama $($Arguments -join ' ') failed with exit code $LASTEXITCODE"
     }
-}
-
-function Ensure-OllamaEmbedModel {
-    param([switch]$Quiet)
-
-    if (Test-OllamaEmbedModel) {
-        if (-not $Quiet) {
-            Write-Host "[ OK ] Embedding model: $script:OllamaEmbedModel" -ForegroundColor Green
-        }
-        return
-    }
-
-    if (-not $Quiet) {
-        Write-Host "Pulling $script:OllamaEmbedModel (codebase embeddings)..." -ForegroundColor Yellow
-    }
-    Invoke-OllamaCli -Arguments @("pull", $script:OllamaEmbedModel)
-}
-
-function Test-OllamaEmbedApi {
-    try {
-        $body = @{ model = $script:OllamaEmbedModel; input = @("test") } | ConvertTo-Json -Compress
-        $resp = Invoke-RestMethod -Uri "$script:OllamaApiBase/api/embed" `
-            -Method POST -ContentType "application/json" -Body $body -TimeoutSec 30
-        return [bool]$resp.embeddings
-    } catch {
-        return $false
-    }
-}
-
-# Load nomic-embed-text into llama-server before the IDE floods /api/embed.
-# Without this, early embed requests get "dial tcp 127.0.0.1:3111: connection refused"
-# and can wedge Ollama so local chat hangs with no response.
-function Wait-OllamaEmbedReady {
-    param(
-        [int]$TimeoutSec = 90,
-        [switch]$Quiet
-    )
-
-    if (-not (Test-OllamaEmbedModel)) {
-        return $false
-    }
-
-    $deadline = (Get-Date).AddSeconds($TimeoutSec)
-    if (-not $Quiet) {
-        Write-Host "Warming embedding model ($script:OllamaEmbedModel)..." -ForegroundColor Yellow -NoNewline
-    }
-    while ((Get-Date) -lt $deadline) {
-        if (Test-OllamaEmbedApi) {
-            if (-not $Quiet) {
-                Write-Host " ready" -ForegroundColor Green
-            }
-            return $true
-        }
-        if (-not $Quiet) {
-            Write-Host "." -NoNewline
-        }
-        Start-Sleep -Seconds 1
-    }
-    if (-not $Quiet) {
-        Write-Host ""
-        Write-Host "[WARN] Embedding warm-up timed out -- codebase indexing may fail until the runner starts" -ForegroundColor Yellow
-    }
-    return $false
 }
 
 function Install-OllamaArchBundle {
@@ -610,7 +534,7 @@ function Assert-OllamaBundled {
     Write-Host "Run once (downloads amd64 ~1.4 GB + arm64 ~15 MB):" -ForegroundColor Yellow
     Write-Host "  npm run bundle:ollama" -ForegroundColor White
     Write-Host ""
-    Write-Host "@codebase indexing requires this step. Chat/Agent still work without it." -ForegroundColor Gray
+    Write-Host "Local image OCR requires this step. @codebase embeddings use built-in MiniLM ONNX." -ForegroundColor Gray
     Write-Host ""
     exit 1
 }

@@ -113,6 +113,8 @@ if ($LASTEXITCODE -ne 0) { Pop-Location; Pop-Location; exit 1 }
 
 # esbuild: creates out/extension.js (required for VS Code to load the extension)
 New-Item -ItemType Directory -Force -Path "build" | Out-Null
+& "$Root\scripts\ensure-minilm.ps1"
+if ($LASTEXITCODE -ne 0) { Pop-Location; Pop-Location; exit 1 }
 if ($env:CONTINUE_RELEASE -eq "1") {
     npm run esbuild-base -- --minify
 } else {
@@ -122,6 +124,10 @@ if ($LASTEXITCODE -ne 0) { Pop-Location; Pop-Location; exit 1 }
 
 if (-not (Test-Path "out\extension.js")) {
     Write-Host "ERROR: out/extension.js was not created" -ForegroundColor Red
+    Pop-Location; Pop-Location; exit 1
+}
+if (-not (Test-Path "out\transformersJsEmbedWorker.js")) {
+    Write-Host "ERROR: out/transformersJsEmbedWorker.js was not created" -ForegroundColor Red
     Pop-Location; Pop-Location; exit 1
 }
 

@@ -1,4 +1,4 @@
-# Mobius -- bundle Ollama runtime (amd64 + arm64) + embed + OCR models (no local chat)
+# Mobius -- bundle Ollama runtime (amd64 + arm64) + GLM-OCR (no embeddings)
 $ErrorActionPreference = "Stop"
 . "$PSScriptRoot\ollama-common.ps1"
 
@@ -41,18 +41,10 @@ foreach ($arch in $script:OllamaSupportedArches) {
 
 Set-Content -Path $versionMarker -Value $version -NoNewline
 
-Write-Host "`nStarting bundled Ollama ($(Get-WindowsCpuArch)) to pull models..." -ForegroundColor Cyan
+Write-Host "`nStarting bundled Ollama ($(Get-WindowsCpuArch)) to pull OCR model..." -ForegroundColor Cyan
 Start-BundledOllamaServer | Out-Null
 Remove-OllamaRetiredModels
-Ensure-OllamaEmbedModel
 Ensure-OllamaOcrModel
-
-Write-Host "Verifying embed API..." -ForegroundColor Yellow
-if (-not (Test-OllamaEmbedApi)) {
-    Write-Host "[FAIL] Embed API check failed" -ForegroundColor Red
-    exit 1
-}
-Write-Host "[ OK ] Embed API ready ($script:OllamaEmbedModel)" -ForegroundColor Green
 
 if (-not (Test-OllamaOcrModel)) {
     Write-Host "[FAIL] OCR model $script:OllamaOcrModel not available" -ForegroundColor Red
@@ -61,13 +53,15 @@ if (-not (Test-OllamaOcrModel)) {
 Write-Host "[ OK ] Local OCR model ready ($script:OllamaOcrModel)" -ForegroundColor Green
 
 $Root = Get-ProjectRoot
+& (Join-Path $PSScriptRoot "ensure-minilm.ps1")
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 & (Join-Path $PSScriptRoot "sync-continue-config.ps1")
 
 Write-Host "`n=== Ollama Bundle Complete ===" -ForegroundColor Green
 foreach ($arch in $script:OllamaSupportedArches) {
     Write-Host "Runtime ($arch): $(Get-OllamaBinDir -Arch $arch)" -ForegroundColor White
 }
-Write-Host "Models  : $(Get-OllamaModelsDir)" -ForegroundColor White
-Write-Host "Embed   : $script:OllamaEmbedModel @ $script:OllamaApiBase" -ForegroundColor White
+Write-Host "Models  : $(Get-OllamaModelsDir) (OCR only; nomic-embed-text retired)" -ForegroundColor White
 Write-Host "OCR     : $script:OllamaOcrModel @ $script:OllamaApiBase" -ForegroundColor White
+Write-Host "Embed   : built-in MiniLM ONNX (transformers.js)" -ForegroundColor White
 Write-Host "Launch  : npm start (auto-picks bin-$(Get-WindowsCpuArch))`n" -ForegroundColor Cyan

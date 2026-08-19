@@ -24,7 +24,7 @@ const { spawn, spawnSync } = require('child_process');
 const readline = require('readline');
 
 const SERVER_NAME = 'mobius-godot';
-const SERVER_VERSION = '1.0.0';
+const SERVER_VERSION = '1.1.0';
 const PROTOCOL_VERSION = '2024-11-05';
 
 // ---------------------------------------------------------------------------
@@ -110,22 +110,41 @@ function searchPathForGodot(exe) {
   return null;
 }
 
-function findWorkspaceRoot() {
-  let cur = process.env.MOBIUS_ROOT ? path.resolve(process.env.MOBIUS_ROOT) : process.cwd();
+function isMobiusRoot(dir) {
+  if (fs.existsSync(path.join(dir, 'game-dev')) && isFile(path.join(dir, 'scripts', 'godot-mcp-server.js'))) {
+    return true;
+  }
+  const pkg = path.join(dir, 'package.json');
+  if (!isFile(pkg)) return false;
+  try {
+    return JSON.parse(fs.readFileSync(pkg, 'utf8')).name === 'Mobius';
+  } catch {
+    return false;
+  }
+}
+
+function walkToMobiusRoot(start) {
+  let cur = path.resolve(start);
   while (true) {
-    if (fs.existsSync(path.join(cur, 'game-dev'))) return cur;
-    const pkg = path.join(cur, 'package.json');
-    if (isFile(pkg)) {
-      try {
-        const p = JSON.parse(fs.readFileSync(pkg, 'utf8'));
-        if (p.name === 'Mobius') return cur;
-      } catch { /* not our package.json */ }
-    }
+    if (isMobiusRoot(cur)) return cur;
     const parent = path.dirname(cur);
-    if (parent === cur) break;
+    if (parent === cur) return null;
     cur = parent;
   }
-  return cur;
+}
+
+function findWorkspaceRoot() {
+  // Prefer the directory that contains this script (scripts/..) so MCP spawn
+  // cwd cannot strand us in ~/.continue or the extension host folder.
+  const starts = [];
+  if (process.env.MOBIUS_ROOT) starts.push(process.env.MOBIUS_ROOT);
+  starts.push(path.join(__dirname, '..'));
+  starts.push(process.cwd());
+  for (const start of starts) {
+    const found = walkToMobiusRoot(start);
+    if (found) return found;
+  }
+  return path.resolve(__dirname, '..');
 }
 
 function projectPath(override) {
@@ -244,6 +263,15 @@ function toolGodotImport(args) {
   return { isError: false, text: `Import finished (exit ${r.status}).\n\n${tail}` };
 }
 
+function countEngineErrors(output) {
+  const lines = String(output || '').split(/\r?\n/);
+  return lines.filter((line) =>
+    /ERROR|SCRIPT ERROR|Parse Error/.test(line)
+    && !/flushing queries/i.test(line)
+    && !/area_set_shape_disabled/i.test(line)
+  ).length;
+}
+
 function toolGodotRun(args) {
   const proj = projectPath(args.project);
   if (!fs.existsSync(path.join(proj, 'project.godot'))) {
@@ -252,10 +280,11 @@ function toolGodotRun(args) {
   const frames = Number(args.frames) > 0 ? Number(args.frames) : 120;
   const argv = ['--headless', '--path', proj, `--quit-after`, String(frames)];
   if (args.scene) argv.push(args.scene);
+  if (args.autoplay) argv.push('--', '--autoplay');
   const r = runGodot(argv, { timeout: 120000 });
   if (r.error) return { isError: true, text: r.error };
   const tail = r.output.split('\n').filter(Boolean).slice(-80).join('\n');
-  const errors = (r.output.match(/ERROR|SCRIPT ERROR|Parse Error/g) || []).length;
+  const errors = countEngineErrors(r.output);
   return {
     isError: errors > 0,
     text: `Ran ${frames} frames (exit ${r.status}). ${errors > 0 ? `Detected ${errors} error line(s).` : 'No Godot errors detected.'}\n\n${tail}`,
@@ -293,7 +322,7 @@ function toolGodotPreview(args) {
   }
   const argv = args.editor
     ? ['--editor', '--path', proj]
-    : ['--path', proj, ...(args.scene ? [args.scene] : [])];
+    : ['--path', proj, ...(args.scene ? [args.scene] : []), ...(args.autoplay ? ['--', '--autoplay'] : [])];
   try {
     const child = spawn(bin, argv, {
       cwd: findWorkspaceRoot(),
@@ -309,13 +338,53 @@ function toolGodotPreview(args) {
         `Opened ${args.editor ? 'editor' : 'game'} window (PID ${child.pid}).`,
         `Project: ${proj}`,
         args.editor
-          ? 'The editor is open; it auto-reimports changed assets and hot-reloads scripts you keep editing.'
-          : 'The game is running; close the window when done. Re-run godot_preview after edits to relaunch.',
+          ? 'The editor is open; it auto-reimports changed assets and hot-reloads scripts you keep editing. This is NOT the running mini-game — use godot_play for that.'
+          : (args.autoplay
+            ? 'The game is running with autopilot (agent collects stars). Close the window when done.'
+            : 'The game is running — use arrow keys to play. Close the window when done. Re-run godot_play after edits to relaunch.'),
       ].join('\n'),
     };
   } catch (e) {
     return { isError: true, text: `Failed to launch Godot window: ${e && e.message ? e.message : e}` };
   }
+}
+
+// Visible running game (not the editor).
+// Visible window: default NO autopilot — user plays with arrow keys and watches live edits.
+// Headless (visible=false): default autopilot for automated YOU WIN verification.
+function toolGodotPlay(args) {
+  const proj = projectPath(args.project);
+  if (!fs.existsSync(path.join(proj, 'project.godot'))) {
+    return { isError: true, text: `No project.godot at ${proj}. Run godot_project_init first.` };
+  }
+  const visible = args.visible !== false;
+  const autoplay = visible ? args.autoplay === true : args.autoplay !== false;
+  if (visible) {
+    return toolGodotPreview({
+      project: args.project,
+      scene: args.scene,
+      editor: false,
+      autoplay,
+    });
+  }
+  const frames = Number(args.frames) > 0 ? Number(args.frames) : 2400;
+  const argv = ['--headless', '--path', proj, '--quit-after', String(frames)];
+  if (args.scene) argv.push(args.scene);
+  if (autoplay) argv.push('--', '--autoplay');
+  const r = runGodot(argv, { timeout: 180000 });
+  if (r.error) return { isError: true, text: r.error };
+  const won = /YOU WIN/i.test(r.output);
+  const errors = countEngineErrors(r.output);
+  const tail = r.output.split('\n').filter(Boolean).slice(-80).join('\n');
+  return {
+    isError: !won || errors > 0,
+    text: [
+      won ? 'Autopilot finished: YOU WIN' : 'Autopilot finished without YOU WIN (increase frames or check spawning).',
+      `Frames ${frames}, exit ${r.status}${errors > 0 ? `, ${errors} error line(s)` : ''}.`,
+      '',
+      tail,
+    ].join('\n'),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -372,13 +441,28 @@ const TOOLS = [
   },
   {
     name: 'godot_preview',
-    description: 'Launch a visible Godot window (editor or running game) for live visual preview. The window hot-reloads files the agent keeps editing.',
+    description: 'Launch a visible Godot window (detached). Default runs the game; set editor=true for the Godot editor UI.',
     inputSchema: {
       type: 'object',
       properties: {
         project: { type: 'string', description: 'Project folder name (default: game-dev).' },
         editor: { type: 'boolean', description: 'Open the editor (true) instead of running the game (default false).' },
+        autoplay: { type: 'boolean', description: 'When running the game, enable autopilot (default false for preview).' },
         scene: { type: 'string', description: 'Optional scene path to run, e.g. res://main.tscn.' },
+      },
+    },
+  },
+  {
+    name: 'godot_play',
+    description: 'Run the mini-game in a visible Godot window (not the editor). Default: arrow keys, no autopilot. Set visible=false for headless autopilot YOU WIN verification.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project: { type: 'string', description: 'Project folder name (default: game-dev).' },
+        scene: { type: 'string', description: 'Optional scene path to run, e.g. res://main.tscn.' },
+        autoplay: { type: 'boolean', description: 'Visible: autopilot only when true. Headless: autopilot unless false.' },
+        visible: { type: 'boolean', description: 'Open a game window (default true). false = headless win check.' },
+        frames: { type: 'number', description: 'Headless only: frames before quit (default 2400).' },
       },
     },
   },
@@ -391,6 +475,7 @@ const TOOL_MAP = {
   godot_run: toolGodotRun,
   godot_test: toolGodotTest,
   godot_preview: toolGodotPreview,
+  godot_play: toolGodotPlay,
 };
 
 // ---------------------------------------------------------------------------
@@ -460,28 +545,71 @@ function handle(msg) {
   respondError(msg.id, -32601, `Method not found: ${msg.method}`);
 }
 
-// CLI conveniences so a human can drive the same code paths as the agent.
-function runCli() {
-  const flag = ['--init', '--import', '--run', '--test', '--preview'].find((f) => process.argv.includes(f));
-  const out = flag === '--init' ? toolGodotProjectInit({})
-    : flag === '--import' ? toolGodotImport({})
-    : flag === '--run' ? toolGodotRun({})
-    : flag === '--test' ? toolGodotTest({})
-    : flag === '--preview' ? toolGodotPreview({})
-    : null;
-  if (out) {
-    console.log(out.text);
-    process.exit(out.isError ? 1 : 0);
+function parseCliOptions() {
+  const argv = process.argv.slice(2);
+  const opts = {
+    editor: false,
+    autoplay: false,
+    visible: true,
+    frames: undefined,
+    project: undefined,
+    scene: undefined,
+    name: undefined,
+  };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--editor') opts.editor = true;
+    else if (a === '--autoplay') opts.autoplay = true;
+    else if (a === '--headless-play') opts.visible = false;
+    else if (a === '--project' || a === '--name' || a === '--scene' || a === '--frames') {
+      opts[a.slice(2)] = argv[++i];
+    }
   }
+  return opts;
+}
+
+// CLI conveniences so a human (and the Agents-window bridge) can drive the
+// same code paths as the MCP tools/call handlers.
+function runCli() {
+  const flag = ['--detect', '--init', '--import', '--run', '--test', '--preview', '--play']
+    .find((f) => process.argv.includes(f));
+  if (!flag) return;
+  const opts = parseCliOptions();
+  const args = {
+    name: opts.name || opts.project,
+    project: opts.project || opts.name,
+    scene: opts.scene,
+    frames: opts.frames ? Number(opts.frames) : undefined,
+    editor: opts.editor,
+    autoplay: opts.autoplay,
+    visible: opts.visible,
+  };
+  const out = flag === '--detect' ? toolGodotDetect()
+    : flag === '--init' ? toolGodotProjectInit(args)
+    : flag === '--import' ? toolGodotImport(args)
+    : flag === '--run' ? toolGodotRun(args)
+    : flag === '--test' ? toolGodotTest(args)
+    : flag === '--play' ? toolGodotPlay(args)
+    : toolGodotPreview(args);
+  console.log(out.text);
+  process.exit(out.isError ? 1 : 0);
 }
 
 function main() {
   // Self-test mode: exercises detection + tool list without needing a client.
   if (process.argv.includes('--self-test')) {
+    const names = TOOLS.map((t) => t.name);
+    const required = ['godot_detect', 'godot_project_init', 'godot_import', 'godot_run', 'godot_test', 'godot_preview', 'godot_play'];
+    const missing = required.filter((n) => !names.includes(n));
     console.log(`${SERVER_NAME} v${SERVER_VERSION} (protocol ${PROTOCOL_VERSION})`);
+    console.log('workspace:', findWorkspaceRoot());
     console.log('godot:', resolveGodot() || 'NOT FOUND');
     console.log('project:', projectPath());
-    console.log('tools:', TOOLS.map((t) => t.name).join(', '));
+    console.log('tools:', names.join(', '));
+    if (missing.length) {
+      console.error('missing tools:', missing.join(', '));
+      process.exit(1);
+    }
     process.exit(0);
   }
 

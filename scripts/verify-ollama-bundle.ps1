@@ -34,6 +34,15 @@ if (-not (Test-Path (Join-Path (Get-OllamaModelsDir) "manifests"))) {
 }
 Write-Host "[ OK ] Models directory populated" -ForegroundColor Green
 
+$currentArch = Get-WindowsCpuArch
+Write-Host "This machine: $currentArch (used for live OCR checks)" -ForegroundColor Gray
+
+if (-not (Test-OllamaServer)) {
+    Start-BundledOllamaServer | Out-Null
+}
+
+Remove-OllamaRetiredModels -Quiet
+
 foreach ($relPath in $script:OllamaRetiredManifestDirs) {
     $retired = Join-Path (Get-OllamaModelsDir) "manifests\registry.ollama.ai\$relPath"
     if (Test-Path $retired) {
@@ -43,29 +52,10 @@ foreach ($relPath in $script:OllamaRetiredManifestDirs) {
     }
 }
 
-$currentArch = Get-WindowsCpuArch
-Write-Host "This machine: $currentArch (used for live API checks)" -ForegroundColor Gray
-
-if (-not (Test-OllamaServer)) {
-    Start-BundledOllamaServer | Out-Null
-}
-
-if (-not (Test-OllamaEmbedModel)) {
-    Write-Host "[FAIL] $script:OllamaEmbedModel not available" -ForegroundColor Red
-    exit 1
-}
-Write-Host "[ OK ] Embedding model: $script:OllamaEmbedModel" -ForegroundColor Green
-
 if (-not (Test-OllamaOcrModel)) {
     Write-Host "[FAIL] $script:OllamaOcrModel not available" -ForegroundColor Red
     exit 1
 }
 Write-Host "[ OK ] Local OCR model: $script:OllamaOcrModel" -ForegroundColor Green
 
-if (-not (Test-OllamaEmbedApi)) {
-    Write-Host "[FAIL] Embed API check failed" -ForegroundColor Red
-    exit 1
-}
-Write-Host "[ OK ] Embed API at $script:OllamaApiBase ($currentArch)" -ForegroundColor Green
-
-Write-Host "`nBundled Ollama is ready for release (amd64 + arm64).`n" -ForegroundColor Green
+Write-Host "`nBundled Ollama is ready for release (amd64 + arm64, OCR only).`n" -ForegroundColor Green
