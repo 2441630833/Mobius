@@ -61,7 +61,7 @@ Mobius/
 ├── hermes-agent/          # 参考用的 agent loop / skills / memory（只读子模块）
 ├── rsi-test/              # RSI（递归自我改进）参考闭环
 ├── .agents/skills/        # ← Mobius Skill 存放位置（自动发现）
-├── resources/ollama/      # 内置 Ollama 运行时（amd64 + arm64）+ 模型
+├── resources/ollama/      # 内置 Ollama 运行时（amd64 + arm64）—— 仅 OCR 模型（不含 embedding/对话）
 ├── scripts/               # 构建、启动、打包自动化脚本（PowerShell）
 ├── config/                # Continue + Mobius 配置模板
 └── .env                   # AI 提供商密钥（同步到 ~/.continue/config.yaml）
