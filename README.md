@@ -61,7 +61,7 @@ Mobius/
 ├── hermes-agent/          # Reference agent loop / skills / memory (read-only submodule)
 ├── rsi-test/              # RSI (Recursive Self-Improvement) reference loop
 ├── .agents/skills/        # ← Where Mobius Skills live (auto-discovered)
-├── resources/ollama/      # Bundled Ollama runtime (amd64 + arm64) + models
+├── resources/ollama/      # Bundled Ollama runtime (amd64 + arm64) — OCR model only (no embeddings/chat)
 ├── scripts/               # Build / launch / packaging automation scripts (PowerShell)
 ├── config/                # Continue + Mobius configuration templates
 └── .env                   # AI provider keys (synced to ~/.continue/config.yaml)
