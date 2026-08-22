@@ -2,8 +2,10 @@
   "mcpServers": {
     "godot": {
       "command": "node",
-      "args": ["scripts/godot-mcp-server.js"],
-      "env": { "NO_COLOR": "1" }
+      "args": ["scripts/godot-mcp-launcher.js"],
+      "env": {
+        "NO_COLOR": "1"
+      }
     }
   }
 }

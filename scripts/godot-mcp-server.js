@@ -148,9 +148,11 @@ function findWorkspaceRoot() {
 }
 
 function projectPath(override) {
+  if (process.env.GODOT_PROJECT) {
+    return path.resolve(process.env.GODOT_PROJECT);
+  }
   const root = findWorkspaceRoot();
   if (override) return path.resolve(root, override);
-  if (process.env.GODOT_PROJECT) return path.resolve(root, process.env.GODOT_PROJECT);
   return path.join(root, 'game-dev');
 }
 
