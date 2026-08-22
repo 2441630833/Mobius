@@ -31,4 +31,4 @@ if (-not (Test-Path $continueConfig)) {
 Write-Host "`n=== Setup Complete ===" -ForegroundColor Green
 Write-Host "Run the IDE:  npm start" -ForegroundColor White
 Write-Host "Configure AI: Settings (gear icon) -> add API key" -ForegroundColor White
-Write-Host "Codebase index: built-in MiniLM ONNX. OCR: npm run bundle:ollama`n" -ForegroundColor White
+Write-Host "Codebase index: built-in MiniLM ONNX. OCR: npm run ensure:glm-ocr`n" -ForegroundColor White

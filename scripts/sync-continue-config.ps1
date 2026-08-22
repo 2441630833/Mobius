@@ -722,4 +722,4 @@ Set-EmbedModelSelection
 Set-PrimaryModelSelection $selectionModel
 Write-Host "Synced $($profiles.Count) profile(s); default '$selectionModel' from $(Split-Path $sourceEnvPath -Leaf) -> $ConfigFile" -ForegroundColor Green
 Write-Host "In-process embed: local-embed (transformers.js all-MiniLM-L6-v2)" -ForegroundColor Cyan
-Write-Host "Ollama OCR: glm-ocr (Agents image preprocess only)" -ForegroundColor Cyan
+Write-Host "GLM-OCR ONNX: onnx-community/GLM-OCR-ONNX (Agents image preprocess only)" -ForegroundColor Cyan

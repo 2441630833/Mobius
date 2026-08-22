@@ -106,21 +106,20 @@ if (Test-Path $extJs) {
     Write-Host "[WARN] Continue extension not built -- run: npm run install:continue" -ForegroundColor Yellow
 }
 
-# Bundled Ollama (optional -- required for @codebase indexing)
-. "$Root\scripts\ollama-common.ps1"
-$cpuArch = Get-WindowsCpuArch
-if (Test-OllamaBundled) {
-    $marker = Get-OllamaBundledVersionFile
-    $ver = if (Test-Path $marker) { (Get-Content $marker -Raw).Trim() } else { "unknown" }
-    Write-Host "[ OK ] Bundled Ollama v$ver ($cpuArch) at resources/ollama/bin-$cpuArch" -ForegroundColor Green
-    if (Test-OllamaAllArchesBundled -Version $ver) {
-        Write-Host "[ OK ] Both amd64 + arm64 runtimes bundled for release" -ForegroundColor Green
-    } else {
-        Write-Host "[WARN] Only $cpuArch runtime present -- run: npm run bundle:ollama for both arches" -ForegroundColor Yellow
-    }
+# Bundled GLM-OCR ONNX (Agents image preprocess)
+$glmDecoder = Join-Path $Root "continue\extensions\vscode\models\onnx-community\GLM-OCR-ONNX\onnx\decoder_model_merged_q4f16.onnx_data"
+if ((Test-Path $glmDecoder) -and ((Get-Item $glmDecoder).Length -ge 100MB)) {
+    Write-Host "[ OK ] GLM-OCR ONNX model present" -ForegroundColor Green
 } else {
-    Write-Host "[WARN] Bundled Ollama ($cpuArch) not installed -- run: npm run bundle:ollama" -ForegroundColor Yellow
-    Write-Host "       @codebase indexing disabled until bundled" -ForegroundColor Gray
+    Write-Host "[WARN] GLM-OCR ONNX not installed -- run: npm run ensure:glm-ocr" -ForegroundColor Yellow
+    Write-Host "       Agents OCR disabled until model weights are downloaded" -ForegroundColor Gray
+}
+
+$minilmOnnx = Join-Path $Root "continue\extensions\vscode\models\all-MiniLM-L6-v2\onnx\model_quantized.onnx"
+if ((Test-Path $minilmOnnx) -and ((Get-Item $minilmOnnx).Length -ge 10MB)) {
+    Write-Host "[ OK ] MiniLM ONNX model present (@codebase indexing)" -ForegroundColor Green
+} else {
+    Write-Host "[WARN] MiniLM ONNX not installed -- run: npm run ensure:minilm" -ForegroundColor Yellow
 }
 
 Write-Host ""

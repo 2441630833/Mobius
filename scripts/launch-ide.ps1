@@ -34,7 +34,7 @@ if (-not (Test-Path $MainJs)) {
 if ($LASTEXITCODE) { exit $LASTEXITCODE }
 & "$Root\scripts\ensure-native-modules.ps1"
 if ($LASTEXITCODE) { exit $LASTEXITCODE }
-& "$Root\scripts\ensure-ollama.ps1"
+& "$Root\scripts\ensure-glm-ocr-onnx.ps1"
 & "$Root\scripts\ensure-minilm.ps1"
 if ($LASTEXITCODE) { exit $LASTEXITCODE }
 

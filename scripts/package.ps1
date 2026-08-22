@@ -74,8 +74,7 @@ if ($env:SKIP_VSCODE_BUILD -eq "1" -or $env:SKIP_CONTINUE_BUILD -eq "1") {
     Write-Host "      npm run package         (same + verify/stage Ollama)" -ForegroundColor Yellow
     Write-Host "  - package:setup is for re-wrapping an already-updated VSCode-win32-* tree only.`n" -ForegroundColor Gray
 }
-Write-Host "This builds a full Windows installer with bundled Ollama + models (~3.5-4 GB)." -ForegroundColor Yellow
-Write-Host "Ollama is stored without LZMA (nocompression) so day-to-day packaging stays fast when models don't change.`n" -ForegroundColor Gray
+Write-Host "This builds a full Windows installer with bundled GLM-OCR ONNX + MiniLM (~2 GB model weights in Continue extension).`n" -ForegroundColor Yellow
 
 . "$Root\scripts\vs-dev-env.ps1"
 Ensure-BuildSourceVersion -RepoDir $VsCodeDir | Out-Null
@@ -103,16 +102,16 @@ Invoke-Step "Sync LICENSE.txt into vscode (installer license page)" {
     Write-Host "Synced LICENSE.txt -> $dstLicense"
 }
 
-if ($env:SKIP_OLLAMA_BUNDLE -ne "1") {
-    Invoke-Step "Bundle Ollama (dual-arch runtime + models)" {
-        & "$Root\scripts\bundle-ollama.ps1"
+if ($env:SKIP_GLM_OCR_BUNDLE -ne "1" -and $env:SKIP_OLLAMA_BUNDLE -ne "1") {
+    Invoke-Step "Ensure GLM-OCR ONNX model" {
+        & "$Root\scripts\ensure-glm-ocr-onnx.ps1" -Strict
     }
 } else {
-    Write-Host "`n=== Bundle Ollama (skipped: SKIP_OLLAMA_BUNDLE=1) ===" -ForegroundColor Yellow
+    Write-Host "`n=== GLM-OCR ONNX (skipped: SKIP_GLM_OCR_BUNDLE=1) ===" -ForegroundColor Yellow
 }
 
-Invoke-Step "Verify bundled Ollama" {
-    & "$Root\scripts\verify-ollama-bundle.ps1"
+Invoke-Step "Verify GLM-OCR ONNX" {
+    & "$Root\scripts\verify-glm-ocr-onnx.ps1"
 }
 
 if ($env:SKIP_CONTINUE_BUILD -ne "1") {
@@ -188,11 +187,6 @@ if ($env:SKIP_VSCODE_BUILD -ne "1") {
         exit 1
     }
 }
-
-Invoke-Step "Stage bundled Ollama into client tree" {
-    & "$Root\scripts\stage-bundled-ollama.ps1" -Arch $Arch
-}
-
 Push-Location $VsCodeDir
 $env:NODE_OPTIONS = "--experimental-strip-types"
 $env:VSCODE_SKIP_NODE_VERSION_CHECK = "1"
@@ -229,4 +223,4 @@ if ($binFiles.Count -gt 0) {
 }
 Write-Host "Version  : $version" -ForegroundColor White
 Write-Host "Size     : $([math]::Round($totalBytes / 1GB, 2)) GB (exe + bins)" -ForegroundColor White
-Write-Host "Includes : Mobius IDE + Continue + Ollama (amd64+arm64) + glm-ocr + MiniLM ONNX`n" -ForegroundColor Gray
+Write-Host "Includes : Mobius IDE + Continue + GLM-OCR ONNX + MiniLM ONNX`n" -ForegroundColor Gray
