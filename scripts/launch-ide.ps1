@@ -45,14 +45,18 @@ Remove-Item Env:NODE_OPTIONS -ErrorAction SilentlyContinue
 # Leftover from `ELECTRON_RUN_AS_NODE=1` (e.g. ad-hoc Electron-as-Node probes) breaks normal IDE launch.
 Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
 $env:VSCODE_SKIP_NODE_VERSION_CHECK = "1"
+# Do not auto-pop Git Credential Manager (gitee.com / github.com) from fetch or agent terminals.
+$env:GIT_TERMINAL_PROMPT = "0"
+$env:GCM_INTERACTIVE = "never"
 # Agent tool superset needs GitHub.copilot-chat languageModelTools (read_file, replace_string_in_file, …).
 # Keep skipping GitHub.copilot (inline completions) to avoid clashing with Continue autocomplete.
 # Set MOBIUS_SKIP_COPILOT=1 to skip both and force Continue-only tool fallback.
+# vscode.github-authentication is not compiled in source-run; Mobius does not use GitHub login.
 if ($env:MOBIUS_SKIP_COPILOT -eq "1") {
     Write-Host "MOBIUS_SKIP_COPILOT=1 -- skipping GitHub.copilot-chat and GitHub.copilot" -ForegroundColor Yellow
-    $env:VSCODE_SKIP_BUILTIN_EXTENSIONS = "GitHub.copilot-chat,GitHub.copilot"
+    $env:VSCODE_SKIP_BUILTIN_EXTENSIONS = "GitHub.copilot-chat,GitHub.copilot,vscode.github-authentication"
 } else {
-    $env:VSCODE_SKIP_BUILTIN_EXTENSIONS = "GitHub.copilot"
+    $env:VSCODE_SKIP_BUILTIN_EXTENSIONS = "GitHub.copilot,vscode.github-authentication"
 }
 # Avoid re-downloading Electron on every launch (rimraf fails if IDE is still running).
 if (Test-Path $ElectronExe) {

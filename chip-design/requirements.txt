@@ -1,0 +1,20 @@
+# custom-fpga-mcp runtime dependencies.
+#
+# Installed into chip-design/.venv by scripts/setup-chip-design.ps1 — never into
+# the system interpreter. Upper bounds are deliberate: an MCP server that the IDE
+# spawns automatically must not break because a transitive dependency shipped a
+# major version overnight.
+#
+# The vendor/ submodules pin the same projects at a known commit for source
+# reference and offline builds; these wheels are what actually runs.
+
+# MCP server framework, plus the protocol SDK it builds on.
+fastmcp>=2.9,<4
+mcp>=1.9,<2
+
+# UART transport to the Arty A7.
+pyserial>=3.5,<4
+
+# LiteX SoC flow is optional and heavy (it pulls a toolchain and builds
+# gateware). Install it explicitly when you want the CSR-attached variant:
+#   pip install -e vendor/litex -e vendor/litex-boards

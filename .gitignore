@@ -32,6 +32,32 @@ rsi-test/
 tools/godot/
 game-dev/.godot/
 
+# Chip Design mode: YosysHQ OSS CAD Suite (Verilator + g++ + openFPGALoader).
+# ~570 MB, regenerable via `npm run chip:cad-suite`. Not committed.
+tools/oss-cad-suite/
+tools/_oss-cad-download/
+
+# Chip Design mode: FPGAwars openXC7 (nextpnr-xilinx + xc7a35tcsg324 chipdb).
+# ~650 MB, regenerable via `npm run chip:openxc7`. Not committed.
+tools/openxc7/
+tools/_openxc7-download/
+
+# Chip Design mode: portable MinGW (GNU make + g++ for Verilator --build).
+# Regenerable via `npm run chip:mingw`. Not committed.
+tools/mingw/
+tools/_mingw-download/
+
+# Chip Design mode: everything under chip-design/ that a machine regenerates.
+# The venv is interpreter- and path-specific, bitstreams are per-board build
+# artefacts, and .toolchain.json records absolute paths discovered on this host --
+# committing any of them would hand the next machine a config that looks valid and
+# points at nothing.
+chip-design/.venv/
+chip-design/build/
+chip-design/.toolchain.json
+chip-design/**/__pycache__/
+chip-design/**/*.pyc
+
 # Local caches and temporary debug files
 .cache/
 .tmp_probe_search.mjs

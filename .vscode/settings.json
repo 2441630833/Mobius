@@ -1,0 +1,5 @@
+{
+	"git.detectSubmodules": false,
+	"git.autofetch": false,
+	"git.terminalAuthentication": false
+}

@@ -1,12 +1,5 @@
 {
   "mcpServers": {
-    "godot": {
-      "command": "node",
-      "args": ["scripts/godot-mcp-launcher.js"],
-      "env": {
-        "NO_COLOR": "1"
-      }
-    },
     "custom-fpga": {
       "command": "node",
       "args": ["scripts/fpga-mcp-launcher.js"],

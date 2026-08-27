@@ -10,3 +10,39 @@
 	path = hermes-agent
 	url = https://github.com/NousResearch/hermes-agent.git
 	branch = main
+[submodule "vendor/fastmcp"]
+	path = vendor/fastmcp
+	url = https://github.com/PrefectHQ/fastmcp.git
+[submodule "vendor/mcp-python-sdk"]
+	path = vendor/mcp-python-sdk
+	url = https://github.com/modelcontextprotocol/python-sdk.git
+[submodule "vendor/pyserial"]
+	path = vendor/pyserial
+	url = https://github.com/pyserial/pyserial.git
+[submodule "vendor/f4pga"]
+	path = vendor/f4pga
+	url = https://github.com/chipsalliance/f4pga.git
+[submodule "vendor/litex"]
+	path = vendor/litex
+	url = https://github.com/enjoy-digital/litex.git
+[submodule "vendor/litex-boards"]
+	path = vendor/litex-boards
+	url = https://github.com/litex-hub/litex-boards.git
+[submodule "vendor/trng"]
+	path = vendor/trng
+	url = https://github.com/secworks/trng.git
+[submodule "vendor/scsynth"]
+	path = vendor/scsynth
+	url = https://github.com/arminalaghi/scsynth.git
+[submodule "vendor/hotspot"]
+	path = vendor/hotspot
+	url = https://github.com/uvahotspot/HotSpot.git
+	update = none
+[submodule "vendor/f4pga-examples"]
+	path = vendor/f4pga-examples
+	url = https://github.com/chipsalliance/f4pga-examples.git
+	update = none
+[submodule "vendor/openFPGALoader"]
+	path = vendor/openFPGALoader
+	url = https://github.com/trabucayre/openFPGALoader.git
+	update = none

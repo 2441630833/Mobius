@@ -187,6 +187,14 @@ if ($env:SKIP_VSCODE_BUILD -ne "1") {
         exit 1
     }
 }
+if ($env:SKIP_CHIP_STAGE -ne "1") {
+    Invoke-Step "Stage chip-design payload (custom-fpga-mcp + FPGA sampler)" {
+        & "$Root\scripts\stage-chip-design.ps1" -Arch $Arch -IncludeVendorRtl
+    }
+} else {
+    Write-Host "`n=== Chip design payload (skipped: SKIP_CHIP_STAGE=1) ===" -ForegroundColor Yellow
+}
+
 Push-Location $VsCodeDir
 $env:NODE_OPTIONS = "--experimental-strip-types"
 $env:VSCODE_SKIP_NODE_VERSION_CHECK = "1"
@@ -223,4 +231,6 @@ if ($binFiles.Count -gt 0) {
 }
 Write-Host "Version  : $version" -ForegroundColor White
 Write-Host "Size     : $([math]::Round($totalBytes / 1GB, 2)) GB (exe + bins)" -ForegroundColor White
-Write-Host "Includes : Mobius IDE + Continue + GLM-OCR ONNX + MiniLM ONNX`n" -ForegroundColor Gray
+$includes = "Mobius IDE + Continue + GLM-OCR ONNX + MiniLM ONNX"
+if ($env:SKIP_CHIP_STAGE -ne "1") { $includes += " + chip-design (FPGA sampler)" }
+Write-Host "Includes : $includes`n" -ForegroundColor Gray
