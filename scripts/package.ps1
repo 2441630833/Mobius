@@ -1,4 +1,4 @@
-# Mobius -- one-click Windows Inno Setup installer (includes bundled Ollama + models)
+# Mobius -- one-click Windows Inno Setup installer (GLM-OCR ONNX + MiniLM; Ollama optional)
 # Default: user-setup (no admin). Pass -Target system for Program Files install.
 param(
     [ValidateSet("x64", "arm64")]
@@ -68,10 +68,10 @@ Write-Host "Install target: $Target ($targetHint)" -ForegroundColor Yellow
 if ($env:SKIP_VSCODE_BUILD -eq "1" -or $env:SKIP_CONTINUE_BUILD -eq "1") {
     Write-Host ""
     Write-Host "WARNING: package:setup / SKIP_* rebuilds ONLY the .exe from the existing client tree." -ForegroundColor Red
-    Write-Host "  - Continue / Ollama runtime code changes are NOT included." -ForegroundColor Red
-    Write-Host "  - After editing ollamaHelper / Continue / workbench, use:" -ForegroundColor Red
-    Write-Host "      npm run package:fast     (rebuild Continue + VS Code client + setup, reuse Ollama)" -ForegroundColor Yellow
-    Write-Host "      npm run package         (same + verify/stage Ollama)" -ForegroundColor Yellow
+    Write-Host "  - Continue / workbench runtime code changes are NOT included." -ForegroundColor Red
+    Write-Host "  - After editing Continue / workbench, use:" -ForegroundColor Red
+    Write-Host "      npm run package:fast     (rebuild Continue + VS Code client + setup)" -ForegroundColor Yellow
+    Write-Host "      npm run package         (same + verify GLM-OCR ONNX)" -ForegroundColor Yellow
     Write-Host "  - package:setup is for re-wrapping an already-updated VSCode-win32-* tree only.`n" -ForegroundColor Gray
 }
 Write-Host "This builds a full Windows installer with bundled GLM-OCR ONNX + MiniLM (~2 GB model weights in Continue extension).`n" -ForegroundColor Yellow
@@ -102,7 +102,7 @@ Invoke-Step "Sync LICENSE.txt into vscode (installer license page)" {
     Write-Host "Synced LICENSE.txt -> $dstLicense"
 }
 
-if ($env:SKIP_GLM_OCR_BUNDLE -ne "1" -and $env:SKIP_OLLAMA_BUNDLE -ne "1") {
+if ($env:SKIP_GLM_OCR_BUNDLE -ne "1") {
     Invoke-Step "Ensure GLM-OCR ONNX model" {
         & "$Root\scripts\ensure-glm-ocr-onnx.ps1" -Strict
     }
@@ -194,6 +194,13 @@ if ($env:SKIP_CHIP_STAGE -ne "1") {
 } else {
     Write-Host "`n=== Chip design payload (skipped: SKIP_CHIP_STAGE=1) ===" -ForegroundColor Yellow
 }
+if ($env:SKIP_GODOT_STAGE -ne "1") {
+    Invoke-Step "Stage Godot Game mode payload (scripts + game-dev)" {
+        & "$Root\scripts\stage-godot.ps1" -Arch $Arch
+    }
+} else {
+    Write-Host "`n=== Godot payload (skipped: SKIP_GODOT_STAGE=1) ===" -ForegroundColor Yellow
+}
 
 Push-Location $VsCodeDir
 $env:NODE_OPTIONS = "--experimental-strip-types"
@@ -228,9 +235,18 @@ Write-Host "Installer: $setupExe" -ForegroundColor White
 Write-Host "Target   : $Target-setup" -ForegroundColor White
 if ($binFiles.Count -gt 0) {
     Write-Host "Volumes  : $($binFiles.Count) disk-spanning .bin file(s) beside the .exe (keep them together)" -ForegroundColor White
+    Write-Host "Size     : $([math]::Round($totalBytes / 1GB, 2)) GB (exe + bins)" -ForegroundColor White
+} else {
+    Write-Host "Size     : $([math]::Round($totalBytes / 1GB, 2)) GB (single setup.exe)" -ForegroundColor White
 }
 Write-Host "Version  : $version" -ForegroundColor White
-Write-Host "Size     : $([math]::Round($totalBytes / 1GB, 2)) GB (exe + bins)" -ForegroundColor White
 $includes = "Mobius IDE + Continue + GLM-OCR ONNX + MiniLM ONNX"
 if ($env:SKIP_CHIP_STAGE -ne "1") { $includes += " + chip-design (FPGA sampler)" }
+if ($env:SKIP_GODOT_STAGE -ne "1") {
+    $includes += " + Godot Game mode (game-dev"
+    if (Test-Path (Join-Path $Root "tools\godot\godot.exe")) {
+        $includes += " + engine"
+    }
+    $includes += ")"
+}
 Write-Host "Includes : $includes`n" -ForegroundColor Gray
