@@ -1,11 +1,11 @@
 /**
- * Smoke-test the production GLM-OCR worker_threads path (ONNX, not Ollama).
+ * Smoke-test GLM-OCR via the production fork path (ONNX, not Ollama).
  * Usage: node scripts/verify-glm-ocr.mjs
  */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { Worker } from "node:worker_threads";
+import { fork } from "node:child_process";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const workerPath = path.join(
@@ -47,6 +47,7 @@ const pngBase64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
 const extNm = path.join(root, "continue", "extensions", "vscode", "node_modules");
+const outNm = path.join(root, "continue", "extensions", "vscode", "out", "node_modules");
 const coreNm = path.join(root, "continue", "core", "node_modules");
 const sharpPlatform = path.join(extNm, "@img", "sharp-win32-x64", "package.json");
 if (!fs.existsSync(sharpPlatform)) {
@@ -54,13 +55,22 @@ if (!fs.existsSync(sharpPlatform)) {
     `@img/sharp-win32-x64 missing in Continue extension (run npm run ensure:glm-ocr): ${sharpPlatform}`,
   );
 }
-process.env.NODE_PATH = [extNm, coreNm, process.env.NODE_PATH]
-  .filter(Boolean)
-  .join(path.delimiter);
 
-const worker = new Worker(workerPath, {
-  workerData: { localModelPath: modelPath },
-  env: process.env,
+const env = {
+  ...process.env,
+  ELECTRON_RUN_AS_NODE: "1",
+  GLM_OCR_LOCAL_MODEL_PATH: modelPath,
+  OMP_NUM_THREADS: process.env.OMP_NUM_THREADS ?? "4",
+  ORT_INTRA_OP_NUM_THREADS: process.env.ORT_INTRA_OP_NUM_THREADS ?? "4",
+  ORT_INTER_OP_NUM_THREADS: process.env.ORT_INTER_OP_NUM_THREADS ?? "1",
+  NODE_PATH: [outNm, extNm, coreNm, process.env.NODE_PATH]
+    .filter(Boolean)
+    .join(path.delimiter),
+};
+
+const child = fork(workerPath, [], {
+  env,
+  stdio: ["ignore", "pipe", "pipe", "ipc"],
 });
 
 const result = await new Promise((resolve, reject) => {
@@ -74,7 +84,7 @@ const result = await new Promise((resolve, reject) => {
       return;
     }
     posted = true;
-    worker.postMessage({
+    child.send({
       id: 1,
       op: "ocr",
       base64: pngBase64,
@@ -83,7 +93,7 @@ const result = await new Promise((resolve, reject) => {
       maxNewTokens: 32,
     });
   };
-  worker.on("message", (msg) => {
+  child.on("message", (msg) => {
     if (!msg || typeof msg !== "object") {
       return;
     }
@@ -93,6 +103,9 @@ const result = await new Promise((resolve, reject) => {
       return;
     }
     if (msg.type === "ready") {
+      if (msg.device) {
+        console.log(`[info] OCR device=${msg.device}`);
+      }
       postOcr();
       return;
     }
@@ -105,24 +118,30 @@ const result = await new Promise((resolve, reject) => {
       }
     }
   });
-  worker.on("error", (err) => {
+  child.on("error", (err) => {
     clearTimeout(timer);
     reject(err);
   });
-  worker.on("exit", (code) => {
-    if (code !== 0) {
+  child.on("exit", (code, signal) => {
+    if (code !== 0 && code !== null) {
       clearTimeout(timer);
-      reject(new Error(`GLM-OCR worker exited with code ${code}`));
+      reject(new Error(`GLM-OCR process exited code=${code} signal=${signal}`));
+    }
+  });
+  child.stderr?.on("data", (buf) => {
+    const line = buf.toString("utf8").trim();
+    if (line) {
+      console.warn(`[glm-ocr stderr] ${line.slice(0, 400)}`);
     }
   });
   postOcr();
 });
 
-await worker.terminate();
+child.kill();
 
 if (typeof result !== "string") {
   fail("GLM-OCR returned non-string result");
 }
 
 console.log(`[ OK ] GLM-OCR ONNX responded (${result.length} chars): ${JSON.stringify(result.slice(0, 120))}`);
-console.log("[ OK ] Built-in GLM-OCR ONNX is running (not Ollama glm-ocr)");
+console.log("[ OK ] Built-in GLM-OCR ONNX is running via fork (not Ollama glm-ocr)");

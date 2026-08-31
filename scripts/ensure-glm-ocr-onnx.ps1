@@ -106,9 +106,12 @@ if (Test-GlmOcrOnnx) {
 }
 
 # GLM-OCR worker requires native deps beside the Continue extension.
+# Worker JS lives in out/, so also sync into out/node_modules for require().
 $coreNm = Join-Path $Root "continue\core\node_modules"
 $extNm = Join-Path $Root "continue\extensions\vscode\node_modules"
+$outNm = Join-Path $Root "continue\extensions\vscode\out\node_modules"
 New-Item -ItemType Directory -Force -Path $extNm | Out-Null
+New-Item -ItemType Directory -Force -Path $outNm | Out-Null
 
 function Invoke-Npm {
     param(
@@ -143,15 +146,19 @@ Invoke-Npm (Join-Path $Root "continue\core") rebuild sharp onnxruntime-node "@hu
 function Sync-NativePackage {
     param([string]$Name)
     $from = Join-Path $coreNm $Name
-    $to = Join-Path $extNm $Name
     if (-not (Test-Path (Join-Path $from "package.json"))) {
         return
     }
-    if (Test-Path $to) {
-        Remove-Item -Recurse -Force $to
+    foreach ($destRoot in @($extNm, $outNm)) {
+        $to = Join-Path $destRoot $Name
+        $parent = Split-Path -Parent $to
+        New-Item -ItemType Directory -Force -Path $parent | Out-Null
+        if (Test-Path $to) {
+            Remove-Item -Recurse -Force $to
+        }
+        Write-Host "Syncing $Name -> $to (GLM-OCR worker)..." -ForegroundColor Yellow
+        Copy-Item -Path $from -Destination $to -Recurse -Force
     }
-    Write-Host "Syncing $Name into Continue extension (GLM-OCR worker)..." -ForegroundColor Yellow
-    Copy-Item -Path $from -Destination $to -Recurse -Force
 }
 
 function Sync-SharpPlatformPackages {
@@ -161,7 +168,9 @@ function Sync-SharpPlatformPackages {
     }
     foreach ($targetRoot in @(
         (Join-Path $extNm "@img"),
-        (Join-Path $extNm "@huggingface\transformers\node_modules\@img")
+        (Join-Path $extNm "@huggingface\transformers\node_modules\@img"),
+        (Join-Path $outNm "@img"),
+        (Join-Path $outNm "@huggingface\transformers\node_modules\@img")
     )) {
         New-Item -ItemType Directory -Force -Path $targetRoot | Out-Null
         foreach ($pkg in @("sharp-win32-x64", "colour")) {
@@ -185,6 +194,7 @@ foreach ($pkg in @("@huggingface/transformers")) {
 Sync-SharpPlatformPackages
 
 $extTransformers = Join-Path $extNm "@huggingface\transformers\package.json"
+$outTransformers = Join-Path $outNm "@huggingface\transformers\package.json"
 $sharpPkg = Join-Path $extNm "@huggingface\transformers\node_modules\sharp\package.json"
 $sharpPlatform = Join-Path $extNm "@img\sharp-win32-x64\package.json"
 $sharpPlatformVersion = $null
@@ -196,7 +206,7 @@ if (Test-Path $sharpPkg) {
     $sharpVersion = (Get-Content $sharpPkg | ConvertFrom-Json).version
 }
 $ortNative = Get-ChildItem -Path (Join-Path $extNm "@huggingface\transformers\node_modules\onnxruntime-node\bin") -Filter "*.node" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-if (-not (Test-Path $extTransformers)) {
+if (-not (Test-Path $extTransformers) -or -not (Test-Path $outTransformers)) {
     Write-Host "[WARN] @huggingface/transformers missing in Continue extension after sync" -ForegroundColor Yellow
     if ($Strict) { exit 1 }
 } elseif (-not (Test-Path $sharpPkg)) {
