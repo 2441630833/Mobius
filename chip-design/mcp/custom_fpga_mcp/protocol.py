@@ -48,6 +48,14 @@ FLAG_FALLBACK_ARGMAX = 0x01
 FLAG_ENTROPY_FAIL = 0x02
 FLAG_RX_FRAME_ERROR = 0x04
 
+# Host-side expectation of the device firmware. The RTL reports its own VERSION
+# localparam in the ping reply; keep DEVICE_VERSION_* in lockstep with
+# rtl/sampler_uart_top.v. A framing or parameter drift is *silent* (the device
+# keeps answering plausibly with wrong tokens), so the host compares versions
+# and warns instead of trusting the wire.
+DEVICE_VERSION_MAJOR = 1
+DEVICE_VERSION_MINOR = 0
+
 # Defaults must match the RTL parameters in sampler_uart_top.v.
 DEFAULT_K = 32
 DEFAULT_SC_LOG2 = 12
@@ -181,6 +189,28 @@ class DeviceInfo:
     @property
     def entropy_ok(self) -> bool:
         return not self.flags & FLAG_ENTROPY_FAIL
+
+
+def device_version_mismatch(info: DeviceInfo) -> str | None:
+    """Explain when ``info`` speaks a different protocol than this host.
+
+    Returns None when the versions agree, or when no real device answered
+    (version_major == 0 — that is a connection problem, not a drift, and the
+    sampling call reports it separately).
+    """
+    if info.version_major == 0:
+        return None
+    if (
+        info.version_major == DEVICE_VERSION_MAJOR
+        and info.version_minor == DEVICE_VERSION_MINOR
+    ):
+        return None
+    return (
+        f"host speaks protocol {DEVICE_VERSION_MAJOR}.{DEVICE_VERSION_MINOR}, "
+        f"device reports {info.version}. Framing or parameters may have drifted "
+        "— re-run fpga_synthesize + fpga_flash so both sides use the same wire "
+        "format."
+    )
 
 
 def parse_ping(frame: Frame) -> DeviceInfo:

@@ -95,6 +95,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_ref.add_argument("logits")
 
+    p_bound = sub.add_parser(
+        "bound",
+        help="closed-loop roofline budget for the sampler (no board needed)",
+    )
+    p_bound.add_argument("--k", type=int, default=None, help="window size, or sweep 8/16/32/64")
+    p_bound.add_argument("--baud", type=int, default=None)
+
     for name in ("info", "sample", "verify", "entropy", "self-test", "sequence"):
         action = sub.choices[name]
         action.add_argument("--port", default=None, help="serial port (default: auto-detect)")
@@ -171,6 +178,11 @@ def main(argv: list[str] | None = None) -> int:
         from . import report
 
         return _emit(report.reference_distribution(_parse_logits(args.logits)))
+
+    if command == "bound":
+        from . import perf_model
+
+        return _emit(perf_model.table(k=args.k, baud=args.baud))
 
     # Everything below needs the serial link.
     from . import sampling

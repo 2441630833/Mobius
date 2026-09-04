@@ -267,5 +267,42 @@ class TestInverseCdf(unittest.TestCase):
         self.assertEqual(hist, counts)
 
 
+class TestProtocolVersion(unittest.TestCase):
+    """Host/device version lockstep.
+
+    The RTL reports its VERSION localparam in the ping reply; the host must
+    notice when the two disagree, because a framing drift does not crash -- it
+    silently returns wrong tokens (the failure mode this whole suite exists to
+    catch).
+    """
+
+    def _info(self, major: int, minor: int) -> protocol.DeviceInfo:
+        return protocol.DeviceInfo(
+            version_major=major,
+            version_minor=minor,
+            k=protocol.DEFAULT_K,
+            logit_width=16,
+            sc_log2=protocol.DEFAULT_SC_LOG2,
+            flags=0,
+        )
+
+    def test_current_device_matches_host(self):
+        self.assertIsNone(
+            protocol.device_version_mismatch(
+                self._info(protocol.DEVICE_VERSION_MAJOR, protocol.DEVICE_VERSION_MINOR)
+            )
+        )
+
+    def test_mismatched_firmware_is_loud(self):
+        msg = protocol.device_version_mismatch(self._info(2, 0))
+        self.assertIsNotNone(msg)
+        self.assertIn("2.0", msg)
+
+    def test_no_device_is_not_reported_as_drift(self):
+        # version_major == 0 means the probe never reached a device; that is a
+        # connection problem and the sampling call reports it, not this check.
+        self.assertIsNone(protocol.device_version_mismatch(self._info(0, 0)))
+
+
 if __name__ == "__main__":
     unittest.main()

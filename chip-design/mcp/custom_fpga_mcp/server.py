@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from typing import Sequence
 
-from . import config, flash, report, sampling, sim, synth, toolchain
+from . import config, flash, perf_model, report, sampling, sim, synth, toolchain
 
 try:
     from fastmcp import FastMCP
@@ -179,6 +179,30 @@ def fpga_list_cables() -> dict:
     problem when fpga_flash fails.
     """
     return flash.list_cables()
+
+
+# ---------------------------------------------------------------------------
+# Closed-loop budget (Redwood roofline)
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool
+def fpga_bound(k: int | None = None, baud: int | None = None) -> dict:
+    """Predict the closed-loop per-token budget for the sampling loop.
+
+    Redwood-style roofline: the theoretical ceiling (UART tx of the K-logit
+    window + FPGA stochastic stream + UART rx of the token) written down
+    *before* touching hardware, so the measured latency_ms from
+    fpga_sample_token / fpga_sample_sequence has something to calibrate
+    against. No board required.
+
+    Args:
+        k: window size to budget (default: sensitivity sweep over 8/16/32/64).
+            K is the main throughput lever -- every candidate costs 2 wire
+            bytes each way.
+        baud: link baud rate (default: device default 115200).
+    """
+    return perf_model.table(k=k, baud=baud)
 
 
 # ---------------------------------------------------------------------------

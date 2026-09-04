@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -128,8 +129,13 @@ def probe_docker() -> Probe:
     )
 
 
-def probe_f4pga_image() -> Probe:
-    docker = probe_docker()
+def probe_f4pga_image(docker: Probe | None = None) -> Probe:
+    """Is the optional F4PGA Docker fallback image present?
+
+    Accepts the docker Probe so ``detect()`` only pings the daemon once;
+    re-probing it here used to double the slowest check in the report.
+    """
+    docker = docker if docker is not None else probe_docker()
     if not docker.available:
         return Probe(
             "f4pga-image",
@@ -394,21 +400,47 @@ class Report:
         }
 
 
+_DETECT_ORDER = [
+    "vendor",
+    "python-venv",
+    "verilator",
+    "make",
+    "g++",
+    "yosys",
+    "nextpnr-xilinx",
+    "docker",
+    "f4pga-image",
+    "openFPGALoader",
+    "serial-port",
+    "bitstream",
+]
+
+
 def detect() -> Report:
-    """Probe everything the chain needs. Order is cheapest-first."""
-    return Report(
-        probes=[
-            probe_vendor(),
-            probe_python_env(),
-            probe_verilator(),
-            probe_make(),
-            probe_gxx(),
-            probe_yosys(),
-            probe_nextpnr_xilinx(),
-            probe_docker(),
-            probe_f4pga_image(),
-            probe_openfpgaloader(),
-            probe_serial(),
-            probe_bitstream(),
-        ]
-    )
+    """Probe everything the chain needs. Order is cheapest-first.
+
+    Every probe spawns at least one subprocess with a multi-second timeout, so
+    running them serially let a single wedged tool (a hung Docker daemon, a
+    slow PATH lookup) stretch a ``fpga_detect`` call into tens of seconds even
+    when every other answer was already known. docker is probed first because
+    probe_f4pga_image reuses its result; the remaining independent probes run
+    in parallel, then the report is assembled in the historical order.
+    """
+    docker = probe_docker()
+    f4pga = probe_f4pga_image(docker)
+    independent = [
+        probe_vendor,
+        probe_python_env,
+        probe_verilator,
+        probe_make,
+        probe_gxx,
+        probe_yosys,
+        probe_nextpnr_xilinx,
+        probe_openfpgaloader,
+        probe_serial,
+        probe_bitstream,
+    ]
+    with ThreadPoolExecutor(max_workers=len(independent)) as pool:
+        done = list(pool.map(lambda fn: fn(), independent))
+    by_name = {p.name: p for p in [*done, docker, f4pga]}
+    return Report(probes=[by_name[n] for n in _DETECT_ORDER])

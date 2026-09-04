@@ -66,11 +66,25 @@ and switch the Agents window to **Chip** (`Ctrl/Cmd+.` cycles modes).
 | `fpga_sample_token` / `fpga_sample_sequence` | Generation loop |
 | `fpga_trng_entropy` | Prove the entropy source is alive |
 | `fpga_verify_distribution` | Acceptance test after a flash |
+| `fpga_bound` | Redwood-style roofline budget for the closed loop (no board) |
 | `fpga_self_test` | End-to-end, stops at the first hard failure |
 
 Hardware is usually absent. `fpga_detect` reports exactly which of Verilator,
 Yosys, openXC7, openFPGALoader, the venv and the serial port are missing. Stay
 useful anyway: edit RTL and verify with lint + simulate. Docker is optional.
+
+## Closed-loop performance model (Redwood-style roofline)
+
+`fpga_bound` predicts the per-token budget of the closed sampling loop the way
+the Redwood paper models its accelerator: a paper roofline first
+(`T_step = T_tx(top-K window) + T_stream(SC pipeline) + T_rx(token frame)` —
+serial stages sum, they do not hide), then real measurements calibrate it.
+Every `fpga_sample_token` / `fpga_sample_sequence` result therefore carries a
+`model_ms` alongside the measured `latency_ms`; a growing
+`measured_minus_model_ms` means host overhead (Python, pyserial, scheduling),
+not the board. Choosing K with `fpga_bound` beats guessing: at 115200 baud the
+window dominates, so K=8 is roughly 4–5x the tokens/s of K=32. These are
+estimates, never substitutes for `fpga_verify_distribution`.
 
 ## Vendored upstream sources (`vendor/`)
 

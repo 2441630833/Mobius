@@ -14,8 +14,10 @@
 //
 //     exp(-d_i) = product over set bits j of  exp(-2^(j-8))
 //
-// Every factor is a *constant*, so a single shared bank of 16 SNGs driving
-// 16 constants covers all K candidates. Per candidate the product of
+// Every factor is a *constant*, so a single shared bank of 12 SNGs driving
+// 12 constants covers all K candidates (entries 12..15 of exp_const round to
+// zero, so those bits are tied to 0 rather than wasting an LFSR/SNG pair).
+// Per candidate the product of
 // independent streams is one AND-reduce:
 //
 //     fire_i = &( cbit | ~d_i )
@@ -27,7 +29,7 @@
 // candidate more than ~16 nats below the max is sampled with probability 0.
 // That is the intended behaviour for top-K sampling.
 //
-// The 16 constant streams are shared across candidates, so candidates are
+// The 12 constant streams are shared across candidates, so candidates are
 // mutually correlated even though each candidate's own marginal probability is
 // exact. Marginal counts -- which is all the CDF uses -- are unbiased.
 //
@@ -144,21 +146,28 @@ module sc_softmax_sampler #(
     // Shared constant-stream bank, reseeded from the TRNG round-robin so no
     // single LFSR is ever fully deterministic.
     // -------------------------------------------------------------------------
-    wire [15:0] cbit_rnd [0:15];
+    // Only j = 0..11 have a non-zero exp_const (entries 12..15 round to 0 in
+    // Q0.16), so a stream for those bits is a constant 0 and its LFSR/SNG pair
+    // is pure area waste. Tie cbit[15:12] to 0; the AND-reduce below then
+    // forces fire=0 for any deficit bit >= 12 exactly as before.
+    wire [15:0] cbit_rnd [0:11];
     wire [15:0] cbit;
+    assign cbit[15:12] = 4'd0;
     reg  [3:0]  reseed_sel;
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             reseed_sel <= 4'd0;
         end else if (rand_bit_valid) begin
-            reseed_sel <= reseed_sel + 4'd1;
+            // Wrap at 12 so every raw entropy bit reseeds a live stream
+            // (with 16 streams, bits 12..15 hit dead streams and were wasted).
+            reseed_sel <= (reseed_sel == 4'd11) ? 4'd0 : reseed_sel + 4'd1;
         end
     end
 
     genvar j;
     generate
-        for (j = 0; j < 16; j = j + 1) begin : g_stream
+        for (j = 0; j < 12; j = j + 1) begin : g_stream
             sc_lfsr #(
                 .W    (16),
                 .TAPS (lfsr_taps(j)),

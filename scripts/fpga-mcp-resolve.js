@@ -85,10 +85,19 @@ function candidateInterpreters(root) {
 /**
  * Existence is not proof: a venv can be half-built, and a recorded path can come
  * from another machine entirely. Probe the import we are about to depend on.
+ *
+ * The package needs Python >= 3.8 (``from __future__ import annotations``,
+ * pathlib, subprocess capture_output). The version check shares the same spawn
+ * as the import so an ancient interpreter on PATH (e.g. a Python 2.7 shim) is
+ * rejected with zero extra processes — one ladder rung, one probe.
  */
 function canImport(python, root, moduleName) {
   if (!python) return false;
-  const probe = spawnSync(python, ['-c', `import ${moduleName}`], {
+  const script =
+    `import sys\n` +
+    `if sys.version_info < (3, 8): sys.exit(2)\n` +
+    `import ${moduleName}\n`;
+  const probe = spawnSync(python, ['-c', script], {
     env: { ...process.env, PYTHONPATH: pkgParent(root), PYTHONIOENCODING: 'utf-8' },
     stdio: 'ignore',
     timeout: 30000,
@@ -102,6 +111,11 @@ function canImport(python, root, moduleName) {
  * `requires` differs by caller on purpose: serving MCP needs `fastmcp`, while
  * `chip:lint` only needs the package itself. Demanding fastmcp for a lint run
  * would send a perfectly working interpreter to the fallback.
+ *
+ * Returns a plain executable string — every caller hands it straight to
+ * spawn(). The `py` launcher entry is safe without a `-3` pin: if the
+ * launcher's default target were Python 2, canImport would reject it via the
+ * version gate and the ladder would move on.
  */
 function resolveInterpreter(root, requires) {
   return candidateInterpreters(root).find((c) => canImport(c, root, requires)) || null;

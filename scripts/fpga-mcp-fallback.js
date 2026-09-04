@@ -248,6 +248,14 @@ const DELEGATED = {
     argv: (args) => ['reference', JSON.stringify(args.logits || [])],
     timeout: 15000,
   },
+  fpga_bound: {
+    argv: (args) => [
+      'bound',
+      ...(args.k == null ? [] : ['--k', String(args.k)]),
+      ...(args.baud == null ? [] : ['--baud', String(args.baud)]),
+    ],
+    timeout: 15000,
+  },
 };
 
 const TOOL_DESCRIPTIONS = {
@@ -257,6 +265,7 @@ const TOOL_DESCRIPTIONS = {
   fpga_lint: 'Verilator lint. Delegated when a plain interpreter can import custom_fpga_mcp.',
   fpga_simulate: 'Statistical testbench. Delegated when a plain interpreter can import custom_fpga_mcp.',
   fpga_reference_distribution: 'Host-side hardware distribution model. No board needed.',
+  fpga_bound: 'Closed-loop roofline budget for the sampling loop. No board needed.',
 };
 
 const TOOL_NAMES = [
@@ -270,6 +279,7 @@ const TOOL_NAMES = [
   'fpga_flash',
   'fpga_list_cables',
   'fpga_device_info',
+  'fpga_bound',
   'fpga_sample_token',
   'fpga_sample_sequence',
   'fpga_verify_distribution',

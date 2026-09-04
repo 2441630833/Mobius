@@ -40,6 +40,7 @@ const REQUIRED_TOOLS = [
   'fpga_flash',
   'fpga_list_cables',
   'fpga_device_info',
+  'fpga_bound',
   'fpga_sample_token',
   'fpga_sample_sequence',
   'fpga_verify_distribution',
