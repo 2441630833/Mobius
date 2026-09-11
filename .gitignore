@@ -61,3 +61,6 @@ chip-design/**/*.pyc
 # Local caches and temporary debug files
 .cache/
 .tmp_probe_search.mjs
+
+# Agent workspace memory: generated locally by the assistant, not part of the IDE source
+.workbuddy/memory/
