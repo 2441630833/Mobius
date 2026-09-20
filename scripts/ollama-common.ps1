@@ -31,12 +31,14 @@ function Get-ProjectRoot {
 }
 
 function Get-MobiusInstallRoot {
-    if ($env:MOBIUS_ROOT) {
-        return $env:MOBIUS_ROOT
-    }
+    # ponytail: MOBIUS_ROOT is set by other Mobius subprocesses (e.g. Godot game mode)
+    # to an unrelated resources dir; only trust a root that actually carries the
+    # ollama config, otherwise fall back to this repo so packaging/setup still works.
     $repoRoot = Get-ProjectRoot
-    if (Test-Path (Join-Path $repoRoot "vscode\scripts\code.bat")) {
-        return $repoRoot
+    foreach ($candidate in @($env:MOBIUS_ROOT, $repoRoot)) {
+        if ($candidate -and (Test-Path (Join-Path $candidate "config\ollama.port"))) {
+            return $candidate
+        }
     }
     return $repoRoot
 }
