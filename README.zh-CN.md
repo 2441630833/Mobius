@@ -33,7 +33,7 @@ Mobius 在 [VS Code](https://github.com/microsoft/vscode) 分支的基础上，�
 |---|---|
 | 🧠 **自我总结 Skill** | 把 Agent 成功完成的任务，蒸馏成可复用、可版本化的 Skill（Markdown 操作手册 + 工具集）。完成的任务越多，Skill 库越丰富。 |
 | 🎯 **意图 → Skill 推荐** | 混合 embedding + 词法检索，读懂用户请求的意图，自动把最相关的 Skill 预加载到 Agent 上下文中——无需手动输入 `/skill`。 |
-| 🔄 **RSI（即将上线）** | *Recursive Self-Improvement，递归自我改进*。在**受控沙箱**内（隐藏的验收测试集、独立评估器、质量门禁、人工审批），让 Agent 提出对自身 Skill 的修改建议，自动验证，只有胜出的候选版本才会晋升。参考实现见 [`rsi-test/`](rsi-test/README.md)。 |
+| 🔄 **RSI** | *Recursive Self-Improvement，递归自我改进*。在**受控沙箱**内（隐藏的验收测试集、独立评估器、质量门禁、人工审批），让 Agent 提出对自身 Skill 的修改建议，自动验证，只有胜出的候选版本才会晋升。可运行的参考闭环见 [`rsi-test/`](rsi-test/README.md)。 |
 
 最终效果：一个使用越久、Agent 能力越强的 IDE——你的每一次成功，都会变成它的本能。
 
@@ -314,9 +314,9 @@ Skill 是 `.agents/skills/` 下的文件夹（Markdown + 脚本）。每个 Skil
 
 ---
 
-## RSI — 递归自我改进（路线图）
+## RSI — 递归自我改进
 
-> ⚠️ 正在积极开发中。参考闭环位于 [`rsi-test/`](rsi-test/README.md)，与 Mobius Skill 的生产级集成已列入路线图。
+> 可运行的参考闭环位于 [`rsi-test/`](rsi-test/README.md)。与实时 Mobius Skill 引擎（混合召回路由、`ILanguageModelsService` 提议器、`.agents/skills` 冠军存储）的生产级集成已列入路线图。
 
 RSI 闭环让 Agent **在受控沙箱内**改进自己的 Skill：
 
@@ -343,7 +343,13 @@ Champion Skill ──▶ Agent（执行任务）
 2. Agent 不能修改 Evaluator 或 Gate。
 3. 每次只改一小步，必须独立验证，可随时回滚。
 
-完整设计与可运行的 Next.js 可视化见 [`rsi-test/README.md`](rsi-test/README.md)。
+完整设计见 [`rsi-test/README.md`](rsi-test/README.md)。试运行：
+
+```powershell
+npm run rsi:test        # 7/7 —— 证明闭环是安全的
+npm run rsi:approve     # 提议 + 门禁 + 审批（离线脚本提议器）
+npm run rsi:rollback    # 回滚上一次晋升
+```
 
 ---
 

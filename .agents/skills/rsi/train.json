@@ -1,0 +1,10 @@
+{
+  "note": "VISIBLE (train) set — the proposer may see these and their misses. Wording is deliberately DIFFERENT from acceptance.json so a proposal that only memorizes the sentence will fail the net-positive-gain gate.",
+  "cases": [
+    { "prompt": "kubectl apply rollout status of the deployment", "expectSkill": "k8s-rollout" },
+    { "prompt": "debug a crash in the worker", "expectSkill": "systematic-debugging" },
+    { "prompt": "make a landing page for the product", "expectSkill": "frontend-design" },
+    { "prompt": "verify the app starts without errors", "expectSkill": "qa" },
+    { "prompt": "review the diff before merging the branch", "expectSkill": "code-review" }
+  ]
+}

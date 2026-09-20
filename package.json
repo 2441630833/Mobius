@@ -73,7 +73,12 @@
     "prepackage": "powershell -ExecutionPolicy Bypass -File scripts/verify-glm-ocr-onnx.ps1",
     "verify:grep": "powershell -ExecutionPolicy Bypass -File scripts/verify-grep-search-fix.ps1",
     "restart:mobius": "powershell -ExecutionPolicy Bypass -File scripts/restart-mobius.ps1",
-    "hooks:install": "powershell -ExecutionPolicy Bypass -File scripts/install-git-hooks.ps1"
+    "hooks:install": "powershell -ExecutionPolicy Bypass -File scripts/install-git-hooks.ps1",
+    "rsi": "node rsi-test/cli.js run --dir rsi-test/.rsi",
+    "rsi:approve": "node rsi-test/cli.js run --dir rsi-test/.rsi --approve",
+    "rsi:evaluate": "node rsi-test/cli.js evaluate --dir rsi-test/.rsi",
+    "rsi:rollback": "node rsi-test/cli.js rollback --dir rsi-test/.rsi",
+    "rsi:test": "node rsi-test/self-test.js"
   },
   "engines": {
     "node": ">=20.0.0"

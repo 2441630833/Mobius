@@ -1,0 +1,20 @@
+{
+  "note": "HIDDEN acceptance set — HUMAN-OWNED. The RSI agent proposes edits that widen skill triggers (description broadening) so that the right skill wins the hybrid route. Never let an agent write this file.",
+  "rules": [
+    "Each case: { prompt, expectSkill } — the skill that SHOULD win the top-1 route.",
+    "Craft each miss so the fix is a BROADER TRIGGER, not memorizing the literal sentence.",
+    "The train.json (visible) and this file must use DIFFERENT wording for the same intent."
+  ],
+  "cases": [
+    { "prompt": "kubernetes cluster pods rollout deploy", "expectSkill": "k8s-rollout" },
+    { "prompt": "deploy this service to the kubernetes cluster", "expectSkill": "k8s-rollout" },
+    { "prompt": "磁盘满了 pod 一直重启排查 cluster 节点", "expectSkill": "k8s-rollout" },
+    { "prompt": "diagnose the stack trace exception crash", "expectSkill": "systematic-debugging" },
+    { "prompt": "调试崩溃 报错 异常 排查根因", "expectSkill": "systematic-debugging" },
+    { "prompt": "build the frontend page layout with css", "expectSkill": "frontend-design" },
+    { "prompt": "设计一个新页面 界面 视觉 ui", "expectSkill": "frontend-design" },
+    { "prompt": "run the unit tests and verify the build passes", "expectSkill": "qa" },
+    { "prompt": "测试项目 能否正常运行 跑一下", "expectSkill": "qa" },
+    { "prompt": "open a pull request to merge the branch", "expectSkill": "code-review" }
+  ]
+}

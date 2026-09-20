@@ -33,7 +33,7 @@ Mobius is built on a [VS Code](https://github.com/microsoft/vscode) fork with th
 |---|---|
 | 🧠 **Self-summarizing Skills** | Distills successfully completed Agent tasks into reusable, versionable Skills (Markdown playbooks + tool sets). The more tasks you complete, the richer your Skill library becomes. |
 | 🎯 **Intent → Skill recommendation** | Hybrid embedding + lexical retrieval that reads the intent of your request and automatically preloads the most relevant Skills into the Agent's context — no need to type `/skill` manually. |
-| 🔄 **RSI (coming soon)** | *Recursive Self-Improvement*. Inside a **controlled sandbox** (hidden acceptance test set, independent evaluator, quality gates, human approval), let the Agent propose changes to its own Skills, validate them automatically, and only promote winning candidate versions. See the reference implementation in [`rsi-test/`](rsi-test/README.md). |
+| 🔄 **RSI** | *Recursive Self-Improvement*. Inside a **controlled sandbox** (hidden acceptance test set, independent evaluator, quality gates, human approval), let the Agent propose changes to its own Skills, validate them automatically, and only promote winning candidate versions. Wired into the live Skill engine, plus a runnable reference loop in [`rsi-test/`](rsi-test/README.md). |
 
 The end result: an IDE whose Agent grows more capable the longer you use it — every success you have becomes its instinct.
 
@@ -48,7 +48,7 @@ The end result: an IDE whose Agent grows more capable the longer you use it — 
 - **Intent-driven Skill matching** — hybrid recall (embedding + lexical) scores Skills for every query and preloads the top matches.
 - **Pluggable agent harness (roadmap)** — Continue is currently the built-in and only harness; the roadmap extracts a thin harness abstraction so multiple agent engines (such as DeepSeek's agent harness) can coexist as plugins that complement Continue, rather than replacing it.
 - **Multi-agent tool superset** — both Continue and GitHub Copilot Chat tools are provided by default (`MOBIUS_SKIP_COPILOT=1` to toggle).
-- **Roadmap: RSI loop** — sandboxed self-improvement with training/acceptance data isolation, 5 quality gates, and human approval.
+- **RSI loop** — sandboxed self-improvement with training/acceptance data isolation, 5 quality gates, human approval, and one-step rollback. Live engine in the workbench (`continue.rsi.mode`: off/shadow/enforce) + [`rsi-test/`](rsi-test/README.md) reference loop (`npm run rsi:test`).
 
 ---
 
@@ -61,6 +61,8 @@ Mobius/
 ├── hermes-agent/          # Reference agent loop / skills / memory (read-only submodule)
 ├── rsi-test/              # RSI (Recursive Self-Improvement) reference loop
 ├── .agents/skills/        # ← Where Mobius Skills live (auto-discovered)
+│   ├── auto/              # Agent self-summarized skills (auto-loaded)
+│   └── rsi/               # RSI sandbox: acceptance.json (human-owned), champion.json, history/
 ├── resources/ollama/      # Bundled Ollama runtime (amd64 + arm64) — OCR model only (no embeddings/chat)
 ├── scripts/               # Build / launch / packaging automation scripts (PowerShell)
 ├── config/                # Continue + Mobius configuration templates
@@ -242,6 +244,10 @@ npm run bundle:ollama
 | `npm run check` | Validate Node, C++ toolset, SDK, Python, Continue build |
 | `npm run sync:config` | Push `.env` to `~/.continue/config.yaml` |
 | `npm run web` | Start the `web/` frontend |
+| `npm run rsi:test` | Run the RSI reference-loop self-test (assertions) |
+| `npm run rsi:approve` | Run one RSI propose→gate→approve cycle |
+| `npm run rsi:rollback` | Undo the last RSI promotion |
+| `npm run typecheck-client` | Type-check the workbench (tsgo, no emit) |
 
 ### Packaging (Windows installer)
 
@@ -314,9 +320,13 @@ This keeps Mobius harness-agnostic at the architecture level, while Continue rem
 
 ---
 
-## RSI — Recursive Self-Improvement (roadmap)
+## RSI — Recursive Self-Improvement
 
-> ⚠️ Under active development. The reference loop lives in [`rsi-test/`](rsi-test/README.md); production-grade integration with Mobius Skills is on the roadmap.
+> **Implemented in the workbench.** The engine lives in
+> `vscode/src/vs/workbench/contrib/continue/browser/continueRsiEngine.ts` (sandbox:
+> evaluator, 5 gates, immutable edits, rollbackable champion store) and
+> `continueRsiController.ts` (binds it to the live Skill engine). A standalone,
+> dependency-free reference loop ships in [`rsi-test/`](rsi-test/README.md).
 
 The RSI loop lets the Agent improve its own Skills **inside a controlled sandbox**:
 
@@ -343,7 +353,33 @@ Three iron rules keep it safe:
 2. The Agent cannot modify the Evaluator or the Gate.
 3. Only one small step at a time, independently validated, rollbackable at any time.
 
-See [`rsi-test/README.md`](rsi-test/README.md) for the full design and a runnable Next.js visualization.
+### Live engine
+
+The workbench engine reads the hidden acceptance set from
+`.agents/skills/rsi/acceptance.json` (human-owned), the visible training split
+from `train.json`, and the current champion from `champion.json`; every promotion
+snapshots the previous champion to `history/` for one-step rollback. Control it
+via `continue.rsi.mode`:
+
+- `off` — disabled.
+- `shadow` *(default)* — evaluate + gate + log an audit trail, but still write the skill (safe rollout).
+- `enforce` — write a skill **only** when it passes every gate; otherwise the champion is kept.
+
+Command palette:
+
+- **RSI: Evaluate Champion Skills** (`mobius.rsi.evaluate`)
+- **RSI: Run One Improvement Iteration** (`mobius.rsi.approve`)
+- **RSI: Roll Back Last Promotion** (`mobius.rsi.rollback`)
+
+### Reference loop
+
+See [`rsi-test/README.md`](rsi-test/README.md) for the standalone design. Try it:
+
+```powershell
+npm run rsi:test        # 7/7 — proves the loop is safe
+npm run rsi:approve     # propose + gate + approve (scripted proposer, offline)
+npm run rsi:rollback    # undo the last promotion
+```
 
 ---
 
