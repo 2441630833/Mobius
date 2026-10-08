@@ -19,6 +19,7 @@
 'use strict';
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');
 const readline = require('readline');
@@ -154,6 +155,70 @@ function projectPath(override) {
   const root = findWorkspaceRoot();
   if (override) return path.resolve(root, override);
   return path.join(root, 'game-dev');
+}
+
+// ---------------------------------------------------------------------------
+// Visible-window singleton registry
+//
+// Every preview/play call used to spawn a *new detached* Godot process, so a
+// long Game-mode session (bootstrap + per-edit + turn-end launches across
+// many turns and IDE restarts) piled up dozens of windows. This registry keeps
+// at most one editor and one game window per project, keyed by resolved
+// project path. It lives in the OS temp dir (never pollutes the game project)
+// and is shared by the MCP server, CLI bridge, and multiple IDE windows.
+// ---------------------------------------------------------------------------
+
+const PREVIEW_REGISTRY_FILE = path.join(os.tmpdir(), 'mobius-godot-previews.json');
+
+function projectRegistryKey(proj) {
+  return path.resolve(proj).toLowerCase();
+}
+
+function isProcessAlive(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    // EPERM means the process exists but belongs to another user — alive.
+    return Boolean(e && e.code === 'EPERM');
+  }
+}
+
+function readPreviewRegistry() {
+  try {
+    const data = JSON.parse(fs.readFileSync(PREVIEW_REGISTRY_FILE, 'utf8'));
+    return data && typeof data === 'object' ? data : {};
+  } catch { return {}; }
+}
+
+function writePreviewRegistry(registry) {
+  try {
+    fs.writeFileSync(PREVIEW_REGISTRY_FILE, JSON.stringify(registry, null, 2), 'utf8');
+  } catch { /* registry is best-effort */ }
+}
+
+/** Live registry entry { pid, kind, startedAt } for (project, kind), or null. Prunes dead entries. */
+function findLivePreview(proj, kind) {
+  const registry = readPreviewRegistry();
+  const entry = registry[projectRegistryKey(proj)]?.[kind];
+  if (!entry || !isProcessAlive(entry.pid)) {
+    return null;
+  }
+  return entry;
+}
+
+function rememberPreview(proj, kind, pid) {
+  const registry = readPreviewRegistry();
+  const key = projectRegistryKey(proj);
+  const kinds = registry[key] || {};
+  // Drop dead PIDs for this project so the file cannot grow unbounded.
+  for (const k of Object.keys(kinds)) {
+    if (!isProcessAlive(kinds[k]?.pid)) delete kinds[k];
+  }
+  kinds[kind] = { pid, kind, startedAt: new Date().toISOString() };
+  registry[key] = kinds;
+  writePreviewRegistry(registry);
 }
 
 // ---------------------------------------------------------------------------
@@ -313,6 +378,11 @@ function toolGodotTest(args) {
 // preview the agent's work. The process is detached and unref'd so it does
 // not block the MCP server; Godot hot-reloads .gd/.tscn files the agent keeps
 // editing while the window stays open.
+//
+// Singleton: at most one editor and one game window per project. A repeated
+// auto-launch reuses the live window instead of spawning a duplicate (this is
+// what previously opened a new Godot window on every Game-mode turn/edit).
+// Pass force=true (explicit godot_play) to relaunch the game window anyway.
 function toolGodotPreview(args) {
   const bin = resolveGodot();
   if (!bin) {
@@ -321,6 +391,30 @@ function toolGodotPreview(args) {
   const proj = projectPath(args.project);
   if (!fs.existsSync(path.join(proj, 'project.godot'))) {
     return { isError: true, text: `No project.godot at ${proj}. Run godot_project_init first.` };
+  }
+  const kind = args.editor ? 'editor' : 'game';
+  const force = args.force === true;
+  let existing = findLivePreview(proj, kind);
+  if (existing && !(force && kind === 'game')) {
+    return {
+      isError: false,
+      text: [
+        `${kind === 'editor' ? 'Godot editor' : 'Game window'} already open for this project (PID ${existing.pid}) — reusing it instead of opening another window.`,
+        `Project: ${proj}`,
+        kind === 'editor'
+          ? 'The open editor auto-reimports assets and hot-reloads saved scripts; no second editor is needed.'
+          : 'Switch to the existing game window to play. Close it first (or call godot_play) to relaunch after edits.',
+      ].join('\n'),
+    };
+  }
+  if (existing && force && kind === 'game') {
+    // Explicit godot_play: replace the running game window with a fresh build.
+    try {
+      process.kill(existing.pid);
+    } catch (e) {
+      if (e && e.code !== 'ESRCH') throw e;
+    }
+    existing = null;
   }
   const argv = args.editor
     ? ['--editor', '--path', proj]
@@ -334,6 +428,7 @@ function toolGodotPreview(args) {
       env: { ...process.env, NO_COLOR: '0' },
     });
     child.unref();
+    rememberPreview(proj, kind, child.pid);
     return {
       isError: false,
       text: [
@@ -362,11 +457,14 @@ function toolGodotPlay(args) {
   const visible = args.visible !== false;
   const autoplay = visible ? args.autoplay === true : args.autoplay !== false;
   if (visible) {
+    // Explicit play: always relaunch the game window (the old one may run a
+    // pre-edit build). The editor window is unaffected and stays singleton.
     return toolGodotPreview({
       project: args.project,
       scene: args.scene,
       editor: false,
       autoplay,
+      force: true,
     });
   }
   const frames = Number(args.frames) > 0 ? Number(args.frames) : 2400;
@@ -450,6 +548,7 @@ const TOOLS = [
         project: { type: 'string', description: 'Project folder name (default: game-dev).' },
         editor: { type: 'boolean', description: 'Open the editor (true) instead of running the game (default false).' },
         autoplay: { type: 'boolean', description: 'When running the game, enable autopilot (default false for preview).' },
+        force: { type: 'boolean', description: 'Internal: relaunch even if a window for the project is already open (default false).' },
         scene: { type: 'string', description: 'Optional scene path to run, e.g. res://main.tscn.' },
       },
     },
@@ -552,6 +651,7 @@ function parseCliOptions() {
   const opts = {
     editor: false,
     autoplay: false,
+    force: false,
     visible: true,
     frames: undefined,
     project: undefined,
@@ -562,6 +662,7 @@ function parseCliOptions() {
     const a = argv[i];
     if (a === '--editor') opts.editor = true;
     else if (a === '--autoplay') opts.autoplay = true;
+    else if (a === '--force') opts.force = true;
     else if (a === '--headless-play') opts.visible = false;
     else if (a === '--project' || a === '--name' || a === '--scene' || a === '--frames') {
       opts[a.slice(2)] = argv[++i];
@@ -584,6 +685,7 @@ function runCli() {
     frames: opts.frames ? Number(opts.frames) : undefined,
     editor: opts.editor,
     autoplay: opts.autoplay,
+    force: opts.force,
     visible: opts.visible,
   };
   const out = flag === '--detect' ? toolGodotDetect()

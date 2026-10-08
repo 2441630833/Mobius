@@ -52,3 +52,7 @@
 [submodule "GameFactory-3A"]
 	path = GameFactory-3A
 	url = https://github.com/OpenDCAI/GameFactory-3A.git
+[submodule "godogen"]
+	path = godogen
+	url = https://github.com/htdt/godogen.git
+

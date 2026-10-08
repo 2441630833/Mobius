@@ -25,6 +25,10 @@ function Copy-GodotEngine {
     if (-not (Test-Path -LiteralPath $exe)) {
         throw "Missing godot.exe after copy: $exe"
     }
+    $consoleTarget = Join-Path $dest "Godot_v4.4.1-stable_win64.exe"
+    if (-not (Test-Path -LiteralPath $consoleTarget)) {
+        Copy-Item -LiteralPath $exe -Destination $consoleTarget -Force
+    }
     $utf8NoBom = New-Object System.Text.UTF8Encoding $false
     [System.IO.File]::WriteAllText((Join-Path $dest "godot.path"), $exe, $utf8NoBom)
     return $true

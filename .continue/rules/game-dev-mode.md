@@ -6,33 +6,45 @@ description: Drive the Godot engine from the agent to build, modify and test gam
 # Game Dev Mode (Godot)
 
 When the user asks to build, modify, or test a game (or says "game mode" / "game dev mode"),
-or when Agents window **Game** mode is selected, treat `game-dev/` as the Godot
-project workspace. Every game asset is a plain text file (`.gd` scripts, `.tscn`
-scenes, `.tres` resources), so Godot auto-imports whatever the agent writes —
-"import into Godot" == "write files under `game-dev/`".
+or when Agents window **Game** mode is selected:
 
-## Drive Godot with these tools (not a raw `godot.exe` guess)
+## Core Invariants
 
-- `godot_detect` — locate the engine binary + version + project dir.
-- `godot_project_init` — scaffold a new Godot 4 project (no-op if it exists).
-- `godot_import` — run the editor headless to (re)import assets after adding files.
-- `godot_run` — headless smoke for N frames (not a playable window).
+1. **All 2D & 3D Games MUST Use Godot**:
+   - Every game (2D and 3D alike) MUST use the Godot engine (Godot 4 GDScript under `game-dev/` or target project).
+   - **NEVER** build Web / Canvas / HTML5 / React / Vite games.
+   - **NEVER** launch a web server (`npm run dev`, `vite`, `python -m http.server`, etc.) to run or preview games.
+
+2. **Search GitHub & Pull First (No Starting from Scratch Immediately)**:
+   - When requested to build a new game, do NOT start creating files from scratch immediately.
+   - First search GitHub for mature open-source Godot game projects with matching mechanics or genre.
+   - Pull/clone the project or reference its architecture and assets.
+   - **gh-proxy Mirror**: If connecting to foreign GitHub fails, is blocked, or times out, ALWAYS use the `https://gh-proxy.com/` mirror source (e.g. `git clone https://gh-proxy.com/https://github.com/<owner>/<repo>.git`).
+
+3. **No Godot Popups During Coding**:
+   - While editing code, writing scripts, importing assets, or testing, **do NOT open the Godot editor or window by default**.
+   - Keep all operations headless (`godot_import`, `godot_test`).
+   - Only open the Godot editor if the user explicitly sends a prompt asking to open Godot.
+
+4. **Playable Godot Preview on Completion**:
+   - When the game code is finished and verified (`godot_test` passes), launch the playable preview game in Godot using `godot_play`.
+   - The user previews and plays the real Godot game.
+
+## Tools
+
+- `godot_detect` — locate engine binary, version, and project directory.
+- `godot_project_init` — scaffold a Godot 4 project (no-op if existing).
+- `godot_import` — run editor headless to (re)import assets after writing files.
+- `godot_run` — headless smoke run for N frames.
 - `godot_test` — run `res://tests/test_runner.gd` headlessly, report pass/fail.
-- `godot_preview` — visible window; default **runs the game**. `editor=true` is the editor only.
-- `godot_play` — **run the mini-game** in Godot (visible + autopilot). Use this to play, not the editor.
-
-These tools work in Continue **Game** mode (MCP) and in the Agents window **Game** / **Agent** modes.
+- `godot_play` — run the playable game window in Godot (with arrow keys / controls).
+- `godot_preview` — open Godot window (`editor=true` ONLY when user explicitly asks to open editor).
 
 ## Workflow
 
-1. Write all game files under `game-dev/`.
-2. After adding new assets/scenes, call `godot_import`.
-3. Verify with `godot_test` (add `test_*` functions to `game-dev/tests/test_runner.gd`).
-4. Smoke-run with `godot_run`, read the Godot output/errors, fix the file, re-run until green.
-5. Call `godot_play` so the mini-game actually runs in a Godot window (autopilot collects stars). Do not open the editor unless the user asked for it.
-
-## If Godot is missing
-
-Run `npm run godot:setup -- -Install` to download Godot 4 into `tools/godot/`.
-The bridge resolves the engine in this order: `GODOT_BIN` →
-`tools/godot/godot.path` → `tools/godot/godot.exe` → PATH → common install dirs.
+1. For new games: Search GitHub for mature Godot projects; clone via `https://gh-proxy.com/` if foreign GitHub connection is blocked.
+2. Write/edit game files under `game-dev/` (`.gd`, `.tscn`, `.tres`).
+3. Call `godot_import` headlessly.
+4. Verify headlessly with `godot_test`.
+5. Do NOT open Godot windows while coding unless the user explicitly requested it.
+6. When complete, call `godot_play` to launch the playable Godot preview game.
