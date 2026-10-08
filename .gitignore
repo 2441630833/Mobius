@@ -27,6 +27,8 @@ resources/ollama/.bundled-version
 # Unrelated embedded repos kept locally only (not part of the open-source release)
 godot/
 rsi-test/
+ppt-master/
+tmp/
 
 # Game Dev mode: downloaded Godot engine + pointer file (gitignored, regenerable)
 tools/godot/

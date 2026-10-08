@@ -375,3 +375,7 @@ npm run rsi:rollback    # 回滚上一次晋升
 - **Ollama**（内置运行时）— MIT
 
 内置的 Ollama 模型与第三方扩展遵循其各自上游许可证。
+
+---
+
+Mobius 支持四种交互模式：**Agent**（通用软件开发）、**Game**（Godot 游戏开发）、**Chip**（FPGA 采样器设计）与 **PPT**（AI 演示文稿与幻灯片生成）。

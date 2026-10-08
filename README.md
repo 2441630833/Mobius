@@ -408,4 +408,4 @@ The bundled Ollama models and third-party extensions follow their respective ups
 
 ---
 
-Mobius supports two interaction modes: **Agent** (autonomous coding) and **Game** (Godot game development).
+Mobius supports four interaction modes: **Agent** (general coding), **Game** (Godot game development), **Chip** (FPGA sampler design), and **PPT** (AI presentation and slide deck generation).
