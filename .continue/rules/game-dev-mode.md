@@ -19,7 +19,7 @@ or when Agents window **Game** mode is selected:
    - When requested to build a new game, do NOT start creating files from scratch immediately.
    - First search GitHub for mature open-source Godot game projects with matching mechanics or genre.
    - Pull/clone the project or reference its architecture and assets.
-   - **gh-proxy Mirror**: If connecting to foreign GitHub fails, is blocked, or times out, ALWAYS use the `https://gh-proxy.com/` mirror source (e.g. `git clone https://gh-proxy.com/https://github.com/<owner>/<repo>.git`).
+   - **gh-proxy Mirror**: If connecting to foreign GitHub fails, is blocked, or times out, ALWAYS use the `https://gh-proxy.org/` mirror source (e.g. `git clone https://gh-proxy.org/https://github.com/<owner>/<repo>.git`).
 
 3. **No Godot Popups During Coding**:
    - While editing code, writing scripts, importing assets, or testing, **do NOT open the Godot editor or window by default**.
@@ -42,7 +42,7 @@ or when Agents window **Game** mode is selected:
 
 ## Workflow
 
-1. For new games: Search GitHub for mature Godot projects; clone via `https://gh-proxy.com/` if foreign GitHub connection is blocked.
+1. For new games: Search GitHub for mature Godot projects; clone via `https://gh-proxy.org/` if foreign GitHub connection is blocked.
 2. Write/edit game files under `game-dev/` (`.gd`, `.tscn`, `.tres`).
 3. Call `godot_import` headlessly.
 4. Verify headlessly with `godot_test`.
