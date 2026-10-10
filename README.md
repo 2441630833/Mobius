@@ -101,27 +101,26 @@ npm start
 
 Mobius provides automated shell scripts and a reproducible Docker build container to build and package native Ubuntu `.deb` installers and portable `.tar.gz` packages.
 
-##### Option 1: Native Local Build on Ubuntu
+##### Option 1: Native Local Build on Ubuntu (Zero-Config)
+
+After cloning the repository, run the root packaging script:
 
 ```bash
-# 1. Install system prerequisites (Ubuntu 20.04 / 22.04 / 24.04)
-sudo apt-get update && sudo apt-get install -y \
-  build-essential pkg-config git python3 \
-  libsecret-1-dev libx11-dev libxkbfile-dev libkrb5-dev \
-  fakeroot dpkg-dev tar xz-utils
+# One-click packaging (automatically checks dependencies, inits submodules, builds & packages):
+bash package-ubuntu.sh
 
-# 2. Check prerequisites
-bash scripts/check-prerequisites-linux.sh
-
-# 3. Compile and package .deb and .tar.gz
+# Or via npm scripts:
+npm run package:ubuntu
+# Or standard packaging:
 npm run package:linux
-# Or for ARM64: npm run package:linux:arm64
+```
 
-# Artifacts are output to ./dist/:
-# - dist/mobius_<version>_amd64.deb
-# - dist/mobius-<version>-linux-x64.tar.gz
+Artifacts will be output to `./dist/`:
+- `dist/mobius_<version>_amd64.deb` (Ubuntu GUI Desktop installer)
+- `dist/mobius-<version>-linux-x64.tar.gz` (Portable green archive)
 
-# 4. Install on Ubuntu
+Install and run on Ubuntu:
+```bash
 sudo apt install ./dist/mobius_*_amd64.deb
 ```
 

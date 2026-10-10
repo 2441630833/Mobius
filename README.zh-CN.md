@@ -99,27 +99,26 @@ npm start
 
 Mobius 提供原生 Shell 自动化脚本与 Docker 容器化打包方案，可输出标准 Ubuntu `.deb` 安装包与便携 `.tar.gz` 归档。
 
-##### 方式 1：Ubuntu 本机编译与打包
+##### 方式 1：Ubuntu 本机极简一键打包（全自动检测依赖与子模块）
+
+拉完代码后，直接运行项目根目录下的打包脚本：
 
 ```bash
-# 1. 安装 Ubuntu 系统依赖（Ubuntu 20.04 / 22.04 / 24.04）
-sudo apt-get update && sudo apt-get install -y \
-  build-essential pkg-config git python3 \
-  libsecret-1-dev libx11-dev libxkbfile-dev libkrb5-dev \
-  fakeroot dpkg-dev tar xz-utils
+# 极简一键打包（自动检测并安装系统依赖、初始化子模块、编译打包全部搞定）
+bash package-ubuntu.sh
 
-# 2. 检查依赖
-bash scripts/check-prerequisites-linux.sh
-
-# 3. 一键编译并打包 Ubuntu .deb 与 portable .tar.gz
+# 或者使用 npm 脚本：
+npm run package:ubuntu
+# 或标准打包命令：
 npm run package:linux
-# 或指定 ARM64: npm run package:linux:arm64
+```
 
-# 生成文件位于 ./dist/
-# - dist/mobius_<version>_amd64.deb
-# - dist/mobius-<version>-linux-x64.tar.gz
+打包完成后，生成文件位于 `./dist/`：
+- `dist/mobius_<version>_amd64.deb` （Ubuntu GUI 桌面版安装包）
+- `dist/mobius-<version>-linux-x64.tar.gz` （便携绿色版）
 
-# 4. 在 Ubuntu 上安装
+直接在 Ubuntu 上安装运行：
+```bash
 sudo apt install ./dist/mobius_*_amd64.deb
 ```
 
