@@ -1,0 +1,56 @@
+# syntax=docker/dockerfile:1
+# Mobius Ubuntu Build Container
+# Builds Ubuntu .deb package and portable .tar.gz archive
+#
+# Build with BuildKit to export artifacts directly to host ./dist:
+#   DOCKER_BUILDKIT=1 docker build -f Dockerfile.ubuntu --target export -o dist .
+#
+# Or standard build:
+#   docker build -f Dockerfile.ubuntu -t mobius-ubuntu .
+#   docker run --rm -v ${PWD}/dist:/output mobius-ubuntu cp -r /build/mobius/dist/. /output/
+
+FROM ubuntu:22.04 AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    NODE_OPTIONS="--experimental-strip-types --max-old-space-size=8192" \
+    VSCODE_SKIP_NODE_VERSION_CHECK="1" \
+    npm_config_arch="x64" \
+    ELECTRON_MIRROR="https://npmmirror.com/mirrors/electron/"
+
+# 1. Install system toolchain & VS Code build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    git \
+    python3 \
+    build-essential \
+    pkg-config \
+    libsecret-1-dev \
+    libx11-dev \
+    libxkbfile-dev \
+    libkrb5-dev \
+    fakeroot \
+    dpkg-dev \
+    tar \
+    xz-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. Install Node.js 22.x
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
+    && node -v && npm -v
+
+WORKDIR /build/mobius
+
+# 3. Copy source files
+COPY . .
+
+# 4. Build Continue & Mobius workbench & package .deb and .tar.gz
+RUN chmod +x scripts/*.sh \
+    && bash scripts/package-linux.sh --arch x64
+
+# =========================================================================
+# Export stage for BuildKit (docker build --target export -o dist .)
+# =========================================================================
+FROM scratch AS export
+COPY --from=builder /build/mobius/dist/* /

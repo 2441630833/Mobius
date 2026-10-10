@@ -73,9 +73,9 @@ See [REBASE.md](REBASE.md) for the rebase workflow against the VS Code / Continu
 
 ---
 
-## Quick Start
+### Quick Start
 
-> 🪟 **Windows-only for now.** Mobius can currently only be built and run on Windows 10/11 (x64 and ARM64). All build scripts are PowerShell, packaging uses Inno Setup, and the bundled Ollama is the Windows build. Linux/macOS support is on the roadmap — the underlying VS Code OSS is already cross-platform; help port the scripts by following the [Contributing](#contributing) section.
+#### Windows
 
 ```powershell
 # 1. Clone (including submodules)
@@ -97,7 +97,51 @@ npm run build:vscode
 npm start
 ```
 
-`npm start` launches Mobius with Continue preloaded. Open the Continue sidebar to chat, edit, and index your codebase.
+#### Linux (Ubuntu / Debian)
+
+Mobius provides automated shell scripts and a reproducible Docker build container to build and package native Ubuntu `.deb` installers and portable `.tar.gz` packages.
+
+##### Option 1: Native Local Build on Ubuntu
+
+```bash
+# 1. Install system prerequisites (Ubuntu 20.04 / 22.04 / 24.04)
+sudo apt-get update && sudo apt-get install -y \
+  build-essential pkg-config git python3 \
+  libsecret-1-dev libx11-dev libxkbfile-dev libkrb5-dev \
+  fakeroot dpkg-dev tar xz-utils
+
+# 2. Check prerequisites
+bash scripts/check-prerequisites-linux.sh
+
+# 3. Compile and package .deb and .tar.gz
+npm run package:linux
+# Or for ARM64: npm run package:linux:arm64
+
+# Artifacts are output to ./dist/:
+# - dist/mobius_<version>_amd64.deb
+# - dist/mobius-<version>-linux-x64.tar.gz
+
+# 4. Install on Ubuntu
+sudo apt install ./dist/mobius_*_amd64.deb
+```
+
+##### Option 2: Docker Build (Cross-platform)
+
+Build without setting up a physical Linux machine:
+
+```bash
+# Windows (PowerShell)
+npm run docker:build:linux
+
+# Linux / macOS (Bash)
+npm run docker:build:linux:sh
+# Or via Docker BuildKit:
+DOCKER_BUILDKIT=1 docker build -f Dockerfile.ubuntu --target export -o dist .
+```
+
+##### Option 3: GitHub Actions CI
+
+Trigger `.github/workflows/build-ubuntu.yml` in your repository or push a version tag (`v*`) to have GitHub Actions build and publish the Ubuntu packages automatically.
 
 ---
 

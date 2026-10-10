@@ -1,0 +1,78 @@
+name: Build Ubuntu Linux (.deb & tar.gz)
+
+on:
+  workflow_dispatch:
+    inputs:
+      arch:
+        description: 'Target Architecture'
+        required: true
+        default: 'x64'
+        type: choice
+        options:
+          - x64
+          - arm64
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-ubuntu:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout Mobius repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Setup Python 3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            pkg-config \
+            libsecret-1-dev \
+            libx11-dev \
+            libxkbfile-dev \
+            libkrb5-dev \
+            fakeroot \
+            dpkg-dev \
+            tar \
+            xz-utils
+
+      - name: Check build prerequisites
+        run: |
+          chmod +x scripts/*.sh
+          bash scripts/check-prerequisites-linux.sh
+
+      - name: Build and package Mobius for Ubuntu
+        run: |
+          ARCH="${{ inputs.arch || 'x64' }}"
+          bash scripts/package-linux.sh --arch "$ARCH"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobius-ubuntu-${{ inputs.arch || 'x64' }}
+          path: dist/*
+          if-no-files-found: error
+
+      - name: Publish to GitHub Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -71,9 +71,9 @@ Mobius/
 
 ---
 
-## 快速开始
+### 快速开始
 
-> 🪟 **目前仅支持 Windows。** Mobius 现在只能在 Windows 10/11（x64 与 ARM64）上构建和运行。构建脚本全部是 PowerShell，打包使用 Inno Setup，内置 Ollama 也是 Windows 版本。Linux/macOS 支持已在路线图上——底层 VS Code OSS 本身已跨平台；欢迎参照[参与贡献](#参与贡献)一节帮助移植脚本。
+#### Windows
 
 ```powershell
 # 1. 克隆（含子模块）
@@ -95,7 +95,51 @@ npm run build:vscode
 npm start
 ```
 
-`npm start` 会启动已预载 Continue 的 Mobius。打开 Continue 侧边栏即可对话、编辑、索引代码库。
+#### Linux (Ubuntu / Debian)
+
+Mobius 提供原生 Shell 自动化脚本与 Docker 容器化打包方案，可输出标准 Ubuntu `.deb` 安装包与便携 `.tar.gz` 归档。
+
+##### 方式 1：Ubuntu 本机编译与打包
+
+```bash
+# 1. 安装 Ubuntu 系统依赖（Ubuntu 20.04 / 22.04 / 24.04）
+sudo apt-get update && sudo apt-get install -y \
+  build-essential pkg-config git python3 \
+  libsecret-1-dev libx11-dev libxkbfile-dev libkrb5-dev \
+  fakeroot dpkg-dev tar xz-utils
+
+# 2. 检查依赖
+bash scripts/check-prerequisites-linux.sh
+
+# 3. 一键编译并打包 Ubuntu .deb 与 portable .tar.gz
+npm run package:linux
+# 或指定 ARM64: npm run package:linux:arm64
+
+# 生成文件位于 ./dist/
+# - dist/mobius_<version>_amd64.deb
+# - dist/mobius-<version>-linux-x64.tar.gz
+
+# 4. 在 Ubuntu 上安装
+sudo apt install ./dist/mobius_*_amd64.deb
+```
+
+##### 方式 2：Docker 容器一键打包（无需配置物理 Linux 环境）
+
+无论在 Windows、macOS 还是 Linux 宿主机上，只要装有 Docker，即可一键生成 Ubuntu 安装包：
+
+```bash
+# Windows (PowerShell)
+npm run docker:build:linux
+
+# Linux / macOS (Bash)
+npm run docker:build:linux:sh
+# 或直接使用 Docker BuildKit:
+DOCKER_BUILDKIT=1 docker build -f Dockerfile.ubuntu --target export -o dist .
+```
+
+##### 方式 3：GitHub Actions 自动构建
+
+项目内置 `.github/workflows/build-ubuntu.yml`，在 GitHub 仓库中触发该工作流或推送 Release Tag，GitHub Actions 将自动在 Ubuntu 环境完成编译并上传 `.deb` 与 `.tar.gz` 安装包。
 
 ---
 
