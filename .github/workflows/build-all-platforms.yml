@@ -44,8 +44,11 @@ jobs:
       - name: Checkout Mobius repository
         uses: actions/checkout@v4
         with:
-          submodules: recursive
           fetch-depth: 0
+
+      - name: Checkout required submodules (vscode & continue)
+        run: |
+          git submodule update --init --recursive vscode continue
 
       - name: Setup Node.js 22.x
         uses: actions/setup-node@v4
@@ -89,8 +92,11 @@ jobs:
       - name: Checkout Mobius repository
         uses: actions/checkout@v4
         with:
-          submodules: recursive
           fetch-depth: 0
+
+      - name: Checkout required submodules (vscode & continue)
+        run: |
+          git submodule update --init --recursive vscode continue
 
       - name: Setup Node.js 22.x
         uses: actions/setup-node@v4
@@ -149,8 +155,12 @@ jobs:
       - name: Checkout Mobius repository
         uses: actions/checkout@v4
         with:
-          submodules: recursive
           fetch-depth: 0
+
+      - name: Checkout required submodules (vscode & continue)
+        shell: pwsh
+        run: |
+          git submodule update --init --recursive vscode continue
 
       - name: Setup Node.js 22.x
         uses: actions/setup-node@v4
