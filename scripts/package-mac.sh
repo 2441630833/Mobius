@@ -72,6 +72,9 @@ if [ "$SKIP_BUILD" -eq 0 ]; then
     pushd "$VSCODE_DIR" >/dev/null
     echo "Running gulp vscode-darwin-$ARCH-min..."
     export NODE_OPTIONS="--experimental-strip-types --max-old-space-size=8192"
+    export VSCODE_SKIP_NODE_VERSION_CHECK="1"
+    export npm_config_arch="$ARCH"
+    export GITHUB_TOKEN="${GITHUB_TOKEN:-}"
     node ./node_modules/gulp/bin/gulp.js "vscode-darwin-$ARCH-min"
     popd >/dev/null
 fi
@@ -88,8 +91,16 @@ APP_BUNDLE_NAME="$NAME_LONG.app"
 APP_PATH="$CLIENT_DIR/$APP_BUNDLE_NAME"
 
 if [ ! -d "$APP_PATH" ]; then
-    echo -e "${RED}[ERROR] App bundle $APP_PATH does not exist!${NC}"
-    exit 1
+    FOUND_APP=$(find "$CLIENT_DIR" -maxdepth 1 -name "*.app" | head -n 1)
+    if [ -n "$FOUND_APP" ] && [ -d "$FOUND_APP" ]; then
+        APP_PATH="$FOUND_APP"
+        APP_BUNDLE_NAME="$(basename "$FOUND_APP")"
+        echo -e "${GREEN}[ OK ] Found app bundle at:${NC} $APP_PATH"
+    else
+        echo -e "${RED}[ERROR] App bundle $APP_PATH does not exist in $CLIENT_DIR!${NC}"
+        ls -la "$CLIENT_DIR" 2>/dev/null || true
+        exit 1
+    fi
 fi
 
 echo -e "Application: ${GREEN}$NAME_LONG${NC} ($APP_BUNDLE_NAME)"
@@ -187,11 +198,13 @@ if [ -n "$HASH_TOOL" ]; then
     [ -f "$(basename "$ZIP_OUTPUT")" ] && FILES_TO_HASH+=("$(basename "$ZIP_OUTPUT")")
     [ -f "$(basename "$TAR_OUTPUT")" ] && FILES_TO_HASH+=("$(basename "$TAR_OUTPUT")")
     
-    $HASH_TOOL "${FILES_TO_HASH[@]}" >> SHA256SUMS.txt
-    # Deduplicate checksum lines
-    sort -u SHA256SUMS.txt -o SHA256SUMS.txt
-    echo -e "${GREEN}[ OK ] SHA256SUMS.txt updated${NC}"
-    cat SHA256SUMS.txt
+    if [ ${#FILES_TO_HASH[@]} -gt 0 ]; then
+        $HASH_TOOL "${FILES_TO_HASH[@]}" >> SHA256SUMS.txt
+        # Deduplicate checksum lines
+        sort -u SHA256SUMS.txt -o SHA256SUMS.txt
+        echo -e "${GREEN}[ OK ] SHA256SUMS.txt updated${NC}"
+        cat SHA256SUMS.txt
+    fi
 fi
 popd >/dev/null
 

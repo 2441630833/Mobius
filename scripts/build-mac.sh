@@ -85,6 +85,7 @@ if [ -d "$CONTINUE_DIR/extensions/vscode" ]; then
     npm link @continuedev/core 2>/dev/null || true
 
     # Download sqlite and ripgrep for darwin if missing
+    mkdir -p ../../core/node_modules/sqlite3
     export SKIP_INSTALLS="false"
     node scripts/prepackage.js --target "darwin-$ARCH"
 
@@ -122,8 +123,28 @@ export npm_config_arch="$ARCH"
 if [ ! -d "node_modules" ] || [ ! -f "node_modules/gulp/bin/gulp.js" ]; then
     echo "Installing VS Code node dependencies..."
     npm install --ignore-scripts
-    echo "Running postinstall..."
-    node build/npm/postinstall.ts
+fi
+
+# Ensure build tooling (@vscode/vsce) is installed
+if [ ! -d "build/node_modules" ] || [ ! -f "build/node_modules/@vscode/vsce/package.json" ]; then
+    echo "Installing VS Code build dependencies (@vscode/vsce)..."
+    (cd build && npm install --ignore-scripts)
+fi
+
+# Ensure extension tooling (esbuild) is installed
+if [ ! -d "extensions/node_modules" ] || [ ! -f "extensions/node_modules/esbuild/package.json" ]; then
+    echo "Installing VS Code extensions dependencies (esbuild)..."
+    (cd extensions && npm install --ignore-scripts)
+fi
+
+echo "Running postinstall..."
+if ! node build/npm/postinstall.ts; then
+    echo -e "${YELLOW}[WARN] postinstall failed, ensuring critical subproject dependencies directly...${NC}"
+    for subdir in build extensions extensions/git extensions/git-base extensions/github extensions/github-authentication extensions/configuration-editing extensions/json-language-features extensions/markdown-language-features; do
+        if [ -f "$subdir/package.json" ]; then
+            (cd "$subdir" && npm install --ignore-scripts) || true
+        fi
+    done
 fi
 
 echo "Compiling VS Code client..."

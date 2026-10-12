@@ -34,7 +34,7 @@ echo -e "运行平台: macOS ${MAC_VER} (${MAC_ARCH})\n"
 echo -e "${CYAN}--> [1/4] 检查项目子模块 (Git submodules)...${NC}"
 if [ ! -f "$ROOT/vscode/package.json" ] || [ ! -d "$ROOT/continue/extensions/vscode" ]; then
     echo -e "${YELLOW}[提示] 检测到子模块未初始化（vscode 或 continue 为空），正在自动拉取...${NC}"
-    git -C "$ROOT" submodule update --init --recursive
+    git -C "$ROOT" submodule update --init --recursive vscode continue
     echo -e "${GREEN}[ OK ] 子模块初始化完成！${NC}"
 else
     echo -e "${GREEN}[ OK ] 子模块已就绪。${NC}"
