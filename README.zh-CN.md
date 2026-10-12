@@ -230,6 +230,37 @@ Mobius web UI: http://localhost:5173/web/
 
 ---
 
+### ☁️ GitHub Actions 云端全自动编译（无需本地配置，全平台覆盖）
+
+如果你本地没有特定操作系统的开发环境（例如在 Windows 机器上想打包 macOS/iOS 桌面版，或在 Mac 上想打包 Windows 安装包），可以直接使用项目内置的 GitHub Actions 云端流水线全自动编译：
+
+| 工作流文件 | 编译目标系统 | 输出安装包格式 | 云端 Runner |
+|---|---|---|---|
+| **`.github/workflows/build-all-platforms.yml`** | **macOS + Windows + Linux 三端并行** | `.dmg`, `.exe`, `.deb`, `.zip`, `.tar.gz` | `macos-14`, `macos-13`, `windows-2022`, `ubuntu-22.04` |
+| **`.github/workflows/build-macos.yml`** | **macOS / 苹果桌面端** (Apple Silicon arm64 / Intel x64) | `Mobius-*-macOS-*.dmg`, `Mobius-*-darwin-*.zip` | `macos-14` (M系列), `macos-13` (Intel) |
+| **`.github/workflows/build-windows.yml`** | **Windows 桌面端** (x64 / arm64) | `Mobius-Setup-*.exe`, `Mobius-*-win32-*.zip` | `windows-2022` |
+| **`.github/workflows/build-ubuntu.yml`** | **Linux / Ubuntu 桌面端** (x64 / arm64) | `mobius_*_amd64.deb`, `mobius-*-linux-*.tar.gz` | `ubuntu-22.04` |
+
+#### 如何一键触发云端打包与下载：
+
+1. **手动一键触发编译 (Manual Trigger)**：
+   - 打开 GitHub 项目仓库页面，点击顶部导航栏的 **"Actions"** 选项卡；
+   - 在左侧工作流列表中选择 **"Build All Platforms (macOS, Windows, Linux)"**；
+   - 点击右侧的 **"Run workflow"** 下拉框，选择分支并指定编译平台（可选择 `all` 编译全部平台，或单选 `macos` / `windows` / `linux`）；
+   - 点击绿色 **"Run workflow"** 按钮启动云端编译。
+2. **下载构建产物 (Artifacts)**：
+   - 编译完成后，点击进入该次运行的详情页面；
+   - 滚动到底部的 **Artifacts (构建产物)** 区域，即可直接下载对应系统的安装包（如 `mobius-macos-arm64`、`mobius-windows-x64`、`mobius-linux-x64`）。
+3. **推送 Release Tag 全自动发布**：
+   - 本地给仓库打版本标签并推送至 GitHub：
+     ```bash
+     git tag v1.0.0
+     git push origin v1.0.0
+     ```
+   - GitHub Actions 将自动触发全平台并行编译，编译完成后自动汇总并将所有三端安装包发布到 GitHub Releases 页面，供团队或用户直接下载！
+
+---
+
 ## 编译环境要求
 
 Mobius 会编译原生 Node 模块（sqlite3、`@parcel/watcher`、LanceDB 等），并打包跨平台桌面应用。`npm run check`（Linux/macOS 下为 `scripts/check-prerequisites-*.sh`）会逐项校验工具链。

@@ -1,0 +1,99 @@
+name: Build Windows Desktop (.exe & zip)
+
+on:
+  workflow_dispatch:
+    inputs:
+      arch:
+        description: 'Target Architecture'
+        required: true
+        default: 'x64'
+        type: choice
+        options:
+          - x64
+          - arm64
+      target:
+        description: 'Installer Target'
+        required: true
+        default: 'user'
+        type: choice
+        options:
+          - user
+          - system
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    name: Build Windows (${{ inputs.arch || 'x64' }})
+    runs-on: windows-2022
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout Mobius repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Setup Python 3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Inno Setup 6
+        run: |
+          choco install innosetup --no-progress -y
+
+      - name: Check build prerequisites
+        run: |
+          npm run check
+
+      - name: Build and package Mobius for Windows
+        shell: pwsh
+        run: |
+          $arch = "${{ inputs.arch || 'x64' }}"
+          $target = "${{ inputs.target || 'user' }}"
+          $env:SKIP_OLLAMA_BUNDLE = '1'
+          $env:PACKAGE_INCREMENTAL = '1'
+          powershell -ExecutionPolicy Bypass -Command "& './scripts/package.ps1' -Arch $arch -Target $target"
+
+          # Collect artifacts into dist/
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $setupDir = "vscode\.build\win32-$arch\$target-setup"
+          $version = (Get-Content vscode\package.json -Raw | ConvertFrom-Json).version
+          if (Test-Path "$setupDir\MobiusSetup.exe") {
+            Copy-Item "$setupDir\MobiusSetup.exe" "dist\Mobius-Setup-${version}-win32-${arch}.exe" -Force
+          }
+          $clientDir = "VSCode-win32-$arch"
+          if (Test-Path $clientDir) {
+            Compress-Archive -Path "$clientDir\*" -DestinationPath "dist\Mobius-${version}-win32-${arch}.zip" -Force
+          }
+
+      - name: Generate Checksums
+        shell: pwsh
+        run: |
+          Push-Location dist
+          Get-FileHash -Algorithm SHA256 (Get-ChildItem -File) | ForEach-Object { "$($_.Hash.ToLower())  $($_.Path | Split-Path -Leaf)" } | Out-File -Encoding utf8 SHA256SUMS.txt
+          Get-Content SHA256SUMS.txt
+          Pop-Location
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobius-windows-${{ inputs.arch || 'x64' }}
+          path: dist/*
+          if-no-files-found: error
+
+      - name: Publish to GitHub Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,233 @@
+name: Build All Platforms (macOS, Windows, Linux)
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Target Platform to Build'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - macos
+          - windows
+          - linux
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  # =========================================================================
+  # 1. macOS (Apple Silicon arm64 & Intel x64) Desktop Build
+  # =========================================================================
+  build-macos:
+    name: Build macOS (${{ matrix.arch }})
+    if: |
+      github.event_name == 'push' ||
+      inputs.platform == 'all' ||
+      inputs.platform == 'macos'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            arch: arm64
+            label: Apple Silicon
+          - os: macos-13
+            arch: x64
+            label: Intel
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout Mobius repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Setup Python 3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Check prerequisites
+        run: |
+          chmod +x scripts/*.sh *.sh
+          bash scripts/check-prerequisites-mac.sh
+
+      - name: Build and package Mobius for macOS Desktop
+        run: |
+          bash scripts/package-mac.sh --arch "${{ matrix.arch }}"
+
+      - name: Upload macOS Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobius-macos-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
+
+  # =========================================================================
+  # 2. Linux (Ubuntu / Debian x64) Build
+  # =========================================================================
+  build-linux:
+    name: Build Linux (x64)
+    if: |
+      github.event_name == 'push' ||
+      inputs.platform == 'all' ||
+      inputs.platform == 'linux'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout Mobius repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Setup Python 3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            pkg-config \
+            libsecret-1-dev \
+            libx11-dev \
+            libxkbfile-dev \
+            libkrb5-dev \
+            fakeroot \
+            dpkg-dev \
+            tar \
+            xz-utils
+
+      - name: Check prerequisites
+        run: |
+          chmod +x scripts/*.sh *.sh
+          bash scripts/check-prerequisites-linux.sh
+
+      - name: Build and package Mobius for Ubuntu
+        run: |
+          bash scripts/package-linux.sh --arch x64
+
+      - name: Upload Linux Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobius-linux-x64
+          path: dist/*
+          if-no-files-found: error
+
+  # =========================================================================
+  # 3. Windows (x64) Desktop Build
+  # =========================================================================
+  build-windows:
+    name: Build Windows (x64)
+    if: |
+      github.event_name == 'push' ||
+      inputs.platform == 'all' ||
+      inputs.platform == 'windows'
+    runs-on: windows-2022
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout Mobius repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Setup Python 3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Inno Setup 6
+        run: |
+          choco install innosetup --no-progress -y
+
+      - name: Check prerequisites
+        run: |
+          npm run check
+
+      - name: Build and package Mobius for Windows
+        shell: pwsh
+        run: |
+          $env:SKIP_OLLAMA_BUNDLE = '1'
+          $env:PACKAGE_INCREMENTAL = '1'
+          powershell -ExecutionPolicy Bypass -Command "& './scripts/package.ps1' -Arch x64 -Target user"
+
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $setupDir = "vscode\.build\win32-x64\user-setup"
+          $version = (Get-Content vscode\package.json -Raw | ConvertFrom-Json).version
+          if (Test-Path "$setupDir\MobiusSetup.exe") {
+            Copy-Item "$setupDir\MobiusSetup.exe" "dist\Mobius-Setup-${version}-win32-x64.exe" -Force
+          }
+          $clientDir = "VSCode-win32-x64"
+          if (Test-Path $clientDir) {
+            Compress-Archive -Path "$clientDir\*" -DestinationPath "dist\Mobius-${version}-win32-x64.zip" -Force
+          }
+
+      - name: Generate Checksums
+        shell: pwsh
+        run: |
+          Push-Location dist
+          Get-FileHash -Algorithm SHA256 (Get-ChildItem -File) | ForEach-Object { "$($_.Hash.ToLower())  $($_.Path | Split-Path -Leaf)" } | Out-File -Encoding utf8 SHA256SUMS.txt
+          Get-Content SHA256SUMS.txt
+          Pop-Location
+
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobius-windows-x64
+          path: dist/*
+          if-no-files-found: error
+
+  # =========================================================================
+  # 4. Unified Release Publishing (Triggered on git tag push v*)
+  # =========================================================================
+  publish-release:
+    name: Publish Unified Multi-Platform Release
+    needs: [build-macos, build-linux, build-windows]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+
+      - name: Consolidate artifacts
+        run: |
+          mkdir -p release-dist
+          find release-artifacts -type f -exec cp {} release-dist/ \;
+          echo "=== Files ready for Release ==="
+          ls -lh release-dist/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -232,6 +232,37 @@ Mobius web UI: http://localhost:5173/web/
 
 ---
 
+### ☁️ GitHub Actions Automated Cloud Builds (No Local Setup Required, Cross-Platform)
+
+If you do not have local development environments for specific operating systems (for example, packaging macOS/iOS desktop binaries on a Windows workstation, or building Windows installers on a Mac), you can build all packages automatically using GitHub Actions:
+
+| Workflow File | Target Operating Systems | Output Package Formats | Cloud Runner |
+|---|---|---|---|
+| **`.github/workflows/build-all-platforms.yml`** | **macOS + Windows + Linux (Concurrent)** | `.dmg`, `.exe`, `.deb`, `.zip`, `.tar.gz` | `macos-14`, `macos-13`, `windows-2022`, `ubuntu-22.04` |
+| **`.github/workflows/build-macos.yml`** | **macOS / Apple Desktop** (Apple Silicon arm64 / Intel x64) | `Mobius-*-macOS-*.dmg`, `Mobius-*-darwin-*.zip` | `macos-14` (Apple Silicon), `macos-13` (Intel) |
+| **`.github/workflows/build-windows.yml`** | **Windows Desktop** (x64 / arm64) | `Mobius-Setup-*.exe`, `Mobius-*-win32-*.zip` | `windows-2022` |
+| **`.github/workflows/build-ubuntu.yml`** | **Linux / Ubuntu Desktop** (x64 / arm64) | `mobius_*_amd64.deb`, `mobius-*-linux-*.tar.gz` | `ubuntu-22.04` |
+
+#### How to Trigger and Download Builds:
+
+1. **Manual One-Click Build Trigger (workflow_dispatch)**:
+   - Navigate to the **"Actions"** tab on your GitHub repository;
+   - Select **"Build All Platforms (macOS, Windows, Linux)"** in the left sidebar;
+   - Click **"Run workflow"**, choose the branch, and select the platform (`all`, `macos`, `windows`, or `linux`);
+   - Click the green **"Run workflow"** button to start parallel cloud compilation.
+2. **Download Build Artifacts**:
+   - When the workflow completes, open the workflow run details;
+   - Scroll down to the **Artifacts** section at the bottom to download installers directly (`mobius-macos-arm64`, `mobius-windows-x64`, `mobius-linux-x64`).
+3. **Automated GitHub Release on Tag**:
+   - Push a version tag to your repository:
+     ```bash
+     git tag v1.0.0
+     git push origin v1.0.0
+     ```
+   - GitHub Actions will automatically compile across all runners, gather all `.dmg`, `.exe`, `.deb`, and `.zip` installers, and publish a unified GitHub Release for download.
+
+---
+
 ## Build Environment Requirements
 
 Mobius compiles native Node modules (sqlite3, `@parcel/watcher`, LanceDB, etc.) and packages cross-platform desktop applications. `npm run check` (or `scripts/check-prerequisites-*.sh` on Linux/macOS) validates the toolchain.
