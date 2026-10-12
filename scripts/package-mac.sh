@@ -108,6 +108,40 @@ echo -e "Version:     ${GREEN}$VERSION${NC}"
 echo -e "Arch:        ${GREEN}$ARCH${NC} ($MAC_ARCH_LABEL)"
 
 # =========================================================================
+# Step 1.5: Fix Permissions & Apply Ad-hoc Code Signature for macOS
+# =========================================================================
+# Note: On macOS Apple Silicon (arm64), any modified or unsigned Mach-O binary
+# is immediately terminated by the kernel (AMFI) with SIGKILL (Killed: 9).
+# An ad-hoc code signature satisfies kernel requirements and prevents instant crashes.
+echo -e "\n${CYAN}--- Step 1.5: Preparing & Signing macOS Application Bundle ---${NC}"
+
+if [ -d "$APP_PATH/Contents/MacOS" ]; then
+    chmod +x "$APP_PATH/Contents/MacOS/"* 2>/dev/null || true
+fi
+
+# Ensure all nested helper binaries are executable
+find "$APP_PATH" -type f -path "*/MacOS/*" -exec chmod +x {} + 2>/dev/null || true
+
+if command -v xattr >/dev/null 2>&1; then
+    echo "Clearing extended quarantine attributes..."
+    xattr -cr "$APP_PATH" 2>/dev/null || true
+fi
+
+if command -v codesign >/dev/null 2>&1; then
+    echo "Applying ad-hoc code signature to $APP_BUNDLE_NAME..."
+    ENTITLEMENTS="$VSCODE_DIR/build/azure-pipelines/darwin/app-entitlements.plist"
+    if [ -f "$ENTITLEMENTS" ]; then
+        codesign --force --deep --sign - --entitlements "$ENTITLEMENTS" "$APP_PATH" || \
+        codesign --force --deep --sign - "$APP_PATH"
+    else
+        codesign --force --deep --sign - "$APP_PATH"
+    fi
+    echo -e "${GREEN}[ OK ] Successfully signed $APP_BUNDLE_NAME ad-hoc${NC}"
+else
+    echo -e "${YELLOW}[WARN] codesign utility not found, skipping signing${NC}"
+fi
+
+# =========================================================================
 # Step 2: Build macOS .dmg Disk Image (Drag-and-Drop installer)
 # =========================================================================
 echo -e "\n${CYAN}--- Step 2: Creating macOS .dmg Disk Image ---${NC}"
@@ -217,3 +251,6 @@ echo -e "or run in terminal:"
 echo -e "  ${YELLOW}hdiutil attach $DMG_OUTPUT${NC}"
 echo -e "  ${YELLOW}cp -R /Volumes/$NAME_LONG/$APP_BUNDLE_NAME /Applications/${NC}"
 echo -e "  ${YELLOW}hdiutil detach /Volumes/$NAME_LONG${NC}\n"
+echo -e "If macOS blocks opening unnotarized app on first launch, run:"
+echo -e "  ${YELLOW}sudo xattr -rd com.apple.quarantine /Applications/$APP_BUNDLE_NAME${NC}"
+echo -e "  ${YELLOW}sudo codesign --force --deep --sign - /Applications/$APP_BUNDLE_NAME${NC}\n"

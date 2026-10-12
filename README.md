@@ -180,6 +180,14 @@ cp -R /Volumes/Mobius/Mobius.app /Applications/
 hdiutil detach /Volumes/Mobius
 ```
 
+> [!TIP]
+> **macOS Gatekeeper & Security Note**:
+> For community releases without an Apple Developer certificate, macOS Gatekeeper may block launch or Apple Silicon may require an ad-hoc signature. If the app exits immediately or says "damaged / cannot verify developer", run this once in macOS Terminal:
+> ```bash
+> sudo xattr -rd com.apple.quarantine /Applications/Mobius.app
+> sudo codesign --force --deep --sign - /Applications/Mobius.app
+> ```
+
 ##### Option 2: macOS Development Build & Launch
 
 ```bash
