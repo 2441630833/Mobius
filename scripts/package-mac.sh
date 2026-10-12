@@ -122,6 +122,26 @@ fi
 # Ensure all nested helper binaries are executable
 find "$APP_PATH" -type f -path "*/MacOS/*" -exec chmod +x {} + 2>/dev/null || true
 
+# Ensure @vscode/policy-watcher has fallback shim so missing native binary does not crash startup
+POLICY_WATCHER_INDEX="$APP_PATH/Contents/Resources/app/node_modules/@vscode/policy-watcher/index.js"
+if [ -f "$POLICY_WATCHER_INDEX" ]; then
+    echo "Applying @vscode/policy-watcher resilience shim..."
+    cat << 'EOF' > "$POLICY_WATCHER_INDEX"
+let w;
+try {
+  w = require('bindings')('vscode-policy-watcher');
+} catch (e) {
+  w = function (p, d, cb) {
+    if (typeof cb === 'function') {
+      setImmediate(() => cb({}));
+    }
+    return { dispose: function () {} };
+  };
+}
+exports.createWatcher = w;
+EOF
+fi
+
 if command -v xattr >/dev/null 2>&1; then
     echo "Clearing extended quarantine attributes..."
     xattr -cr "$APP_PATH" 2>/dev/null || true

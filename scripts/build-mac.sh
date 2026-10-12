@@ -137,6 +137,25 @@ if [ ! -d "extensions/node_modules" ] || [ ! -f "extensions/node_modules/esbuild
     (cd extensions && npm install --ignore-scripts)
 fi
 
+# Ensure @vscode/policy-watcher has fallback shim so missing native binary does not crash startup
+POLICY_WATCHER_SRC="$VSCODE_DIR/node_modules/@vscode/policy-watcher/index.js"
+if [ -f "$POLICY_WATCHER_SRC" ]; then
+    cat << 'EOF' > "$POLICY_WATCHER_SRC"
+let w;
+try {
+  w = require('bindings')('vscode-policy-watcher');
+} catch (e) {
+  w = function (p, d, cb) {
+    if (typeof cb === 'function') {
+      setImmediate(() => cb({}));
+    }
+    return { dispose: function () {} };
+  };
+}
+exports.createWatcher = w;
+EOF
+fi
+
 echo "Running postinstall..."
 if ! node build/npm/postinstall.ts; then
     echo -e "${YELLOW}[WARN] postinstall failed, ensuring critical subproject dependencies directly...${NC}"
