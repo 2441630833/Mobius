@@ -9,7 +9,7 @@
 **Mobius gets smarter the more you use it.** It observes how you work, distills successful operations into reusable **Skills**, and then automatically matches the most relevant Skill to each task through an intent-recognition based recommendation algorithm — the Agent's capabilities accumulate with use, instead of starting from zero with every conversation.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.txt)
-[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20(x64%20%2F%20ARM64)-blue)]()
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20%7C%20Linux%20%7C%20macOS%20%7C%20Web-blue)]()
 [![Node](https://img.shields.io/badge/node-22.18%2B%20%7C%2024.x-brightgreen)]()
 [![VS](https://img.shields.io/badge/VS-2022%20(v143)-purple)]()
 
@@ -64,7 +64,7 @@ Mobius/
 │   ├── auto/              # Agent self-summarized skills (auto-loaded)
 │   └── rsi/               # RSI sandbox: acceptance.json (human-owned), champion.json, history/
 ├── resources/ollama/      # Bundled Ollama runtime (amd64 + arm64) — OCR model only (no embeddings/chat)
-├── scripts/               # Build / launch / packaging automation scripts (PowerShell)
+├── scripts/               # Build / launch / packaging automation scripts (PowerShell, Bash)
 ├── config/                # Continue + Mobius configuration templates
 └── .env                   # AI provider keys (synced to ~/.continue/config.yaml)
 ```
@@ -142,25 +142,111 @@ DOCKER_BUILDKIT=1 docker build -f Dockerfile.ubuntu --target export -o dist .
 
 Trigger `.github/workflows/build-ubuntu.yml` in your repository or push a version tag (`v*`) to have GitHub Actions build and publish the Ubuntu packages automatically.
 
+#### macOS (Apple Silicon arm64 / Intel x64)
+
+Mobius fully supports native compilation and packaging for macOS Desktop (Desktop IDE), supporting both Apple Silicon (M1/M2/M3/M4 arm64) and Intel (x64) architectures, generating standard `.dmg` drag-and-drop disk image installers and portable `.zip` archives.
+
+##### Option 1: Native Local Packaging on macOS (Zero-Config)
+
+In macOS terminal, clone the repository and run the root packaging script:
+
+```bash
+# One-click packaging (checks Xcode CLT, submodules, Node environment, and packages):
+bash package-mac.sh
+
+# Or via npm script:
+npm run package:mac
+
+# Specify target architecture (Apple Silicon arm64 or Intel x64):
+npm run package:mac:arm64
+npm run package:mac:x64
+
+# (Convenience alias for iOS desktop / Apple platform build):
+bash package-ios.sh
+npm run package:ios
+```
+
+Generated packages will be located in `./dist/`:
+- `dist/Mobius-<version>-macOS-<arch>.dmg` (Standard macOS disk image installer with Applications drag-to-install shortcut)
+- `dist/Mobius-<version>-darwin-<arch>.zip` (Portable green archive preserving Mach-O permissions and symlinks)
+- `dist/SHA256SUMS.txt` (Cryptographic checksums)
+
+Install and run on macOS:
+```bash
+# Double-click the .dmg and drag Mobius.app to Applications,
+# or mount and copy directly in terminal:
+hdiutil attach dist/Mobius-*-macOS-*.dmg
+cp -R /Volumes/Mobius/Mobius.app /Applications/
+hdiutil detach /Volumes/Mobius
+```
+
+##### Option 2: macOS Development Build & Launch
+
+```bash
+# Build workbench and Continue extension:
+npm run build:mac
+
+# Launch in development mode:
+npm run start:mac
+
+# Or launch packaged release app bundle:
+npm run start:mac -- --release
+```
+
+##### Option 3: GitHub Actions Automated CI Build
+
+Mobius includes `.github/workflows/build-macos.yml` configured with a dual matrix for Apple Silicon (`macos-14`) and Intel (`macos-13`). Pushing a release tag (`v*`) or dispatching the workflow automatically builds and publishes macOS `.dmg` and `.zip` artifacts.
+
+---
+
+#### Web Deployment & Mobile Support (iOS / iPadOS / Android / Browser Remote Access)
+
+> **Note on iOS / Mobile Devices**: Due to Apple iOS / iPadOS security and sandboxing models, mobile devices cannot run native Electron desktop binaries. Mobius provides an **out-of-the-box Web Server deployment mode**. Any iPhone, iPad, Android tablet, or lightweight laptop can access the complete agentic IDE in the browser!
+
+##### Start the Web Server
+
+Run on any host machine or cloud server with Node.js or Python:
+
+```bash
+# Start Mobius Web Server (default port 5173):
+npm run web
+
+# Or specify custom port (Linux / macOS):
+WEB_PORT=8080 npm run web
+
+# Windows PowerShell custom port:
+$env:WEB_PORT='8080'; npm run web
+```
+
+Terminal will output the URL:
+```
+Mobius web UI: http://localhost:5173/web/
+```
+
+##### Native-Like PWA App Experience on iOS / iPadOS (iPhone / iPad)
+
+1. Open **Safari** on your iPad or iPhone and visit `http://<server-ip>:5173/web/`;
+2. Tap the Safari **Share button** at the bottom (or toolbar);
+3. Select **"Add to Home Screen"** and confirm;
+4. Mobius will appear on your iOS home screen as a standalone, borderless **fullscreen PWA app**, supporting touch gestures, on-screen keyboard, and full AI agent features!
+
 ---
 
 ## Build Environment Requirements
 
-Mobius compiles native Node modules (sqlite3, `@parcel/watcher`, LanceDB, etc.) and packages an Electron app. `npm run check` validates each item in the toolchain below.
+Mobius compiles native Node modules (sqlite3, `@parcel/watcher`, LanceDB, etc.) and packages cross-platform desktop applications. `npm run check` (or `scripts/check-prerequisites-*.sh` on Linux/macOS) validates the toolchain.
 
-### Required Software
+### Platform Support Matrix & Prerequisites
 
-| Component | Version | Notes |
-|---|---|---|
-| **Windows** | 10 / 11 x64 or ARM64 | **The only currently supported build and run platform.** All build scripts are PowerShell (`.ps1`), packaging uses Inno Setup, and the bundled Ollama runtime only includes Windows builds. The underlying VS Code OSS is cross-platform, but Mobius's build toolchain has not yet been ported to Linux/macOS — community contributions welcome. |
-| **Visual Studio 2022** | Any edition (Community / Pro / Enterprise) with **MSVC v143** | Required to compile native C++ modules. Both the regular and **Spectre-mitigated** C++ x64/x86 libraries for v143 must be installed (details below). |
-| **"Desktop development with C++" workload** | — | Install via Visual Studio Installer. |
-| **Windows 10/11 SDK** | Latest (10.0.22621 or newer) | The Electron download stage needs `signtool`; usually installed with the C++ workload. |
-| **Node.js** | **22.18+ LTS** or **24.x** | `vscode/.nvmrc` pins 24.15.0. Use `nvm install 24.15.0 && nvm use 24.15.0`. 22.18+ also works. |
-| **Python** | 3.10+ | Used by `node-gyp` to compile native addons; must be on `PATH`. |
-| **Git** | 2.40+ | Submodule support required. |
-| **Inno Setup 6** | 6.2+ | Only needed when building the Windows installer (`npm run package`). |
-| **PowerShell** | 5.1 or 7.x | All build scripts are PowerShell. |
+| Platform / OS | Status | Build Toolchain & Required Components | Packaging Output |
+|---|---|---|---|
+| **Windows 10 / 11** (x64 / ARM64) | Officially Supported (Desktop) | Visual Studio 2022 (MSVC v143 with Spectre-mitigated libs), Windows 10/11 SDK (`signtool`), Inno Setup 6, PowerShell 5.1/7+ | Single Setup installer (`.exe`), Portable directory |
+| **Linux (Ubuntu / Debian)** (x64 / arm64) | Officially Supported (Desktop / Docker) | GCC / G++ (>= 11), `pkg-config`, `libsecret-1-dev`, `libx11-dev`, `libxkbfile-dev`, `libkrb5-dev`, `fakeroot`, `dpkg-dev` | Debian package (`.deb`), Portable tarball (`.tar.gz`) |
+| **macOS (Apple Desktop)** (Apple Silicon arm64 / Intel x64) | Officially Supported (Desktop) | Xcode Command Line Tools (`clang` / `make`), `hdiutil` (built-in), `ditto` (built-in) | Apple Disk Image (`.dmg`), Portable zip (`.zip`) |
+| **iOS / iPadOS / Mobile** (Safari / PWA) | Officially Supported (Web Server Mode) | Server requires Node.js 20+ or Python 3; Client requires modern mobile browser (Safari / Chrome) | PWA Fullscreen App, Web IDE |
+| **Node.js (Universal)** | Required on all hosts | **22.18+ LTS** or **24.x** (`vscode/.nvmrc` pins 24.15.0) | — |
+| **Python 3 (Universal)** | Required on all hosts | 3.10+ (used by `node-gyp` to compile native addons; on `PATH`) | — |
+| **Git (Universal)** | Required on all hosts | 2.40+ (recursive submodule clone required) | — |
 
 ### Visual Studio 2022 — Workloads and Individual Components
 

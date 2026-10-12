@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Launch Mobius on macOS (dev mode from source or built app bundle)
+set -eo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+VSCODE_DIR="$ROOT/vscode"
+
+ARCH="$(uname -m)"
+case "$ARCH" in
+    arm64)  ARCH="arm64" ;;
+    x86_64) ARCH="x64" ;;
+    *)      ARCH="arm64" ;;
+esac
+
+APP_BUNDLE="$ROOT/VSCode-darwin-$ARCH/Mobius.app"
+
+# Check if user requested launch of built release bundle
+if [[ "$1" == "--release" ]] || [[ "$1" == "--app" ]]; then
+    shift
+    if [ -d "$APP_BUNDLE" ]; then
+        echo "Opening Mobius release app bundle: $APP_BUNDLE"
+        open "$APP_BUNDLE" --args "$@"
+        exit 0
+    else
+        echo "Release bundle $APP_BUNDLE not found. Launching development mode instead..."
+    fi
+fi
+
+if [ ! -f "$VSCODE_DIR/scripts/code.sh" ]; then
+    echo "VS Code source not found at $VSCODE_DIR"
+    exit 1
+fi
+
+if [ ! -f "$VSCODE_DIR/out/main.js" ]; then
+    echo "VS Code is not compiled. Please run: bash scripts/build-mac.sh"
+    exit 1
+fi
+
+export VSCODE_SKIP_NODE_VERSION_CHECK="1"
+export GIT_TERMINAL_PROMPT="0"
+export GCM_INTERACTIVE="never"
+
+unset NODE_OPTIONS
+unset ELECTRON_RUN_AS_NODE
+
+if [ "$MOBIUS_SKIP_COPILOT" = "1" ]; then
+    export VSCODE_SKIP_BUILTIN_EXTENSIONS="GitHub.copilot-chat,GitHub.copilot,vscode.github-authentication"
+else
+    export VSCODE_SKIP_BUILTIN_EXTENSIONS="GitHub.copilot,vscode.github-authentication"
+fi
+
+echo "Launching Mobius macOS dev client..."
+exec "$VSCODE_DIR/scripts/code.sh" "$@"

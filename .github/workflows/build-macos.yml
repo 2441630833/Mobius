@@ -1,0 +1,78 @@
+name: Build macOS Desktop (.dmg & zip)
+
+on:
+  workflow_dispatch:
+    inputs:
+      arch:
+        description: 'Target Architecture'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - arm64
+          - x64
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-macos:
+    name: Build macOS (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            arch: arm64
+            label: Apple Silicon
+          - os: macos-13
+            arch: x64
+            label: Intel
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    if: |
+      github.event_name == 'push' ||
+      inputs.arch == 'all' ||
+      inputs.arch == matrix.arch
+
+    steps:
+      - name: Checkout Mobius repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Setup Python 3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Check build prerequisites
+        run: |
+          chmod +x scripts/*.sh *.sh
+          bash scripts/check-prerequisites-mac.sh
+
+      - name: Build and package Mobius for macOS Desktop
+        run: |
+          bash scripts/package-mac.sh --arch "${{ matrix.arch }}"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobius-macos-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
+
+      - name: Publish to GitHub Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

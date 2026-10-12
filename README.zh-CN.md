@@ -9,7 +9,7 @@
 **Mobius 越用越聪明。** 它会观察你的工作方式，把成功的操作沉淀成可复用的 **Skill（技能）**，再通过基于意图识别的推荐算法，自动为每个任务匹配最合适的 Skill——Agent 的能力会随着使用不断累积，而不是每次对话都从零开始。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.txt)
-[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20(x64%20%2F%20ARM64)-blue)]()
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20%7C%20Linux%20%7C%20macOS%20%7C%20Web-blue)]()
 [![Node](https://img.shields.io/badge/node-22.18%2B%20%7C%2024.x-brightgreen)]()
 [![VS](https://img.shields.io/badge/VS-2022%20(v143)-purple)]()
 
@@ -62,7 +62,7 @@ Mobius/
 ├── rsi-test/              # RSI（递归自我改进）参考闭环
 ├── .agents/skills/        # ← Mobius Skill 存放位置（自动发现）
 ├── resources/ollama/      # 内置 Ollama 运行时（amd64 + arm64）—— 仅 OCR 模型（不含 embedding/对话）
-├── scripts/               # 构建、启动、打包自动化脚本（PowerShell）
+├── scripts/               # 构建、启动、打包自动化脚本（PowerShell 与 Bash）
 ├── config/                # Continue + Mobius 配置模板
 └── .env                   # AI 提供商密钥（同步到 ~/.continue/config.yaml）
 ```
@@ -140,25 +140,111 @@ DOCKER_BUILDKIT=1 docker build -f Dockerfile.ubuntu --target export -o dist .
 
 项目内置 `.github/workflows/build-ubuntu.yml`，在 GitHub 仓库中触发该工作流或推送 Release Tag，GitHub Actions 将自动在 Ubuntu 环境完成编译并上传 `.deb` 与 `.tar.gz` 安装包。
 
+#### macOS / 苹果桌面系统 (Apple Silicon arm64 / Intel x64)
+
+Mobius 完整支持 macOS 桌面端（Desktop IDE）的原生编译与打包，支持最新的 Apple Silicon (M1/M2/M3/M4 arm64) 以及 Intel (x64) 芯片架构，生成标准 `.dmg` 拖拽安装镜像与便携 `.zip` 压缩包。
+
+##### 方式 1：macOS 本机极简一键打包
+
+在 macOS 终端中，克隆代码后直接运行根目录打包脚本：
+
+```bash
+# 极简一键打包（自动检测 Xcode CLT、子模块、Node 环境并完成打包）：
+bash package-mac.sh
+
+# 亦可通过 npm 脚本调用：
+npm run package:mac
+
+# 指定架构打包（例如指定 Apple Silicon arm64 或 Intel x64）：
+npm run package:mac:arm64
+npm run package:mac:x64
+
+# （兼容快捷别名，用户常说的 iOS 桌面 / 苹果系统打包）：
+bash package-ios.sh
+npm run package:ios
+```
+
+打包完成后，生成文件位于 `./dist/`：
+- `dist/Mobius-<version>-macOS-<arch>.dmg`（标准 macOS 磁盘镜像安装包，含拖拽至 Applications 快捷方式）
+- `dist/Mobius-<version>-darwin-<arch>.zip`（便携免安装绿色归档，完美保留 Mach-O 权限与软链接）
+- `dist/SHA256SUMS.txt`（安全哈希校验和）
+
+安装与运行方式：
+```bash
+# 双击打开 .dmg 镜像，直接将 Mobius.app 拖拽至 Applications 即可！
+# 或在终端直接挂载：
+hdiutil attach dist/Mobius-*-macOS-*.dmg
+cp -R /Volumes/Mobius/Mobius.app /Applications/
+hdiutil detach /Volumes/Mobius
+```
+
+##### 方式 2：macOS 源码构建与调试
+
+```bash
+# 仅编译工作台与扩展：
+npm run build:mac
+
+# 启动开发调试客户端：
+npm run start:mac
+
+# 或直接运行打包好的 Release 应用：
+npm run start:mac -- --release
+```
+
+##### 方式 3：GitHub Actions 自动构建 macOS 安装包
+
+项目内置 `.github/workflows/build-macos.yml`，配置了 Apple Silicon (`macos-14`) 与 Intel (`macos-13`) 双矩阵构建。当推送 Release Tag (`v*`) 或手动触发时，GitHub Actions 会自动编译并打包发布 macOS `.dmg` 与 `.zip` 安装包。
+
+---
+
+#### Web 部署与移动端支持 (iOS / iPadOS / Android / 浏览器远程访问)
+
+> **关于 iOS / 移动端运行的说明**：由于 Apple iOS / iPadOS 系统的沙箱机制与限制，移动设备无法直接运行原生的 Electron 桌面应用。为此，Mobius 提供了**开箱即用的 Web 服务端部署模式**。任何 iPhone、iPad、Android 平板或远程轻薄本，均可通过浏览器无缝使用 Mobius 的全套智能体开发与编辑功能！
+
+##### 启动 Web 终端服务端
+
+在任意安装有 Node.js 或 Python 的机器（或云服务器）上运行：
+
+```bash
+# 启动 Mobius Web 服务端（默认端口 5173）：
+npm run web
+
+# 或指定自定义端口（Linux / macOS）：
+WEB_PORT=8080 npm run web
+
+# Windows PowerShell 指定端口：
+$env:WEB_PORT='8080'; npm run web
+```
+
+启动后终端将输出访问链接：
+```
+Mobius web UI: http://localhost:5173/web/
+```
+
+##### 在 iOS / iPadOS (iPhone / iPad) 上获得原生 App 体验
+
+1. 打开 iPad 或 iPhone 上的 **Safari 浏览器**，访问 `http://<服务器IP>:5173/web/`；
+2. 点击 Safari 底部（或顶部工具栏）的 **"分享" (Share) 按钮**；
+3. 选择 **"添加到主屏幕" (Add to Home Screen)** 并确认；
+4. 桌面将生成精美的 Mobius 应用图标，点击后以**无边框全屏 PWA 原生应用模式**启动，支持触摸手势、移动端虚拟键盘与全功能 AI 对话！
+
 ---
 
 ## 编译环境要求
 
-Mobius 会编译原生 Node 模块（sqlite3、`@parcel/watcher`、LanceDB 等），并打包 Electron 应用。`npm run check` 会逐项校验以下工具链。
+Mobius 会编译原生 Node 模块（sqlite3、`@parcel/watcher`、LanceDB 等），并打包跨平台桌面应用。`npm run check`（Linux/macOS 下为 `scripts/check-prerequisites-*.sh`）会逐项校验工具链。
 
-### 必需软件
+### 各平台支持矩阵与环境依赖
 
-| 组件 | 版本 | 说明 |
-|---|---|---|
-| **Windows** | 10 / 11 x64 或 ARM64 | **目前唯一支持的构建与运行平台。** 所有构建脚本均为 PowerShell（`.ps1`），打包使用 Inno Setup，内置 Ollama 运行时也仅含 Windows 版本。底层 VS Code OSS 本身跨平台，但 Mobius 的构建工具链尚未移植到 Linux/macOS——欢迎社区贡献。 |
-| **Visual Studio 2022** | 任意版本（Community / Pro / Enterprise），含 **MSVC v143** | 编译原生 C++ 模块必需。v143 的普通版与 **Spectre 缓解版** C++ x64/x86 库都必须安装（详见下文）。 |
-| **"使用 C++ 的桌面开发"工作负载** | — | 通过 Visual Studio Installer 安装。 |
-| **Windows 10/11 SDK** | 最新（10.0.22621 或更高） | Electron 下载阶段需要 `signtool`；通常随 C++ 工作负载一并安装。 |
-| **Node.js** | **22.18+ LTS** 或 **24.x** | `vscode/.nvmrc` 锁定 24.15.0。使用 `nvm install 24.15.0 && nvm use 24.15.0`。22.18+ 同样可用。 |
-| **Python** | 3.10+ | `node-gyp` 编译原生插件使用，必须在 `PATH` 中。 |
-| **Git** | 2.40+ | 需支持子模块。 |
-| **Inno Setup 6** | 6.2+ | 仅在构建 Windows 安装包（`npm run package`）时需要。 |
-| **PowerShell** | 5.1 或 7.x | 所有构建脚本均为 PowerShell。 |
+| 平台 / 系统 | 支持状态 | 编译工具链与必需组件 | 打包输出格式 |
+|---|---|---|---|
+| **Windows 10 / 11** (x64 / ARM64) | 官方支持（桌面端） | Visual Studio 2022 (MSVC v143 含 Spectre 缓解库)、Windows 10/11 SDK (`signtool`)、Inno Setup 6、PowerShell 5.1/7+ | 单文件安装器 (`.exe`)、免安装绿色版 |
+| **Linux (Ubuntu / Debian)** (x64 / arm64) | 官方支持（桌面端 / Docker） | GCC / G++ (>= 11)、`pkg-config`、`libsecret-1-dev`、`libx11-dev`、`libxkbfile-dev`、`libkrb5-dev`、`fakeroot`、`dpkg-dev` | Debian 安装包 (`.deb`)、便携归档 (`.tar.gz`) |
+| **macOS (苹果桌面系统)** (Apple Silicon arm64 / Intel x64) | 官方支持（桌面端） | Xcode Command Line Tools (`clang` / `make`)、`hdiutil`（系统自带）、`ditto`（系统自带） | 苹果磁盘镜像 (`.dmg`)、免安装归档 (`.zip`) |
+| **iOS / iPadOS / 移动端** (Safari / PWA) | 官方支持（Web 服务端访问） | 服务端只需 Node.js 20+ 或 Python 3，客户端任意现代移动浏览器（Safari / Chrome） | PWA 全屏应用、Web IDE |
+| **Node.js (通用)** | 所有平台必需 | **22.18+ LTS** 或 **24.x**（`vscode/.nvmrc` 锁定 24.15.0） | — |
+| **Python 3 (通用)** | 所有平台必需 | 3.10+（`node-gyp` 编译原生插件使用，必须在 `PATH` 中） | — |
+| **Git (通用)** | 所有平台必需 | 2.40+（需完整支持子模块递归克隆） | — |
 
 ### Visual Studio 2022 — 工作负载与单个组件
 
