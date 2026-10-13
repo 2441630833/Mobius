@@ -148,10 +148,13 @@ fi
 if [ "$IS_INSTALLED" = true ]; then
     echo -e "\n${CYAN}=== 正在准备同步更新 Mobius ===${NC}"
     echo -e "准备从 ${INSTALLED_VER:-已安装} (${INSTALLED_TAG:-未知}) 升级至最新版本 ${BOLD}${LATEST_TAG}${NC}..."
-    if pgrep -x "Mobius" >/dev/null 2>&1; then
-        echo -e "${YELLOW}!${NC} 检测到 Mobius 正在运行，正在通知其安全保存并退出..."
+    if pgrep -f "Mobius.app" >/dev/null 2>&1 || pgrep -x "Mobius" >/dev/null 2>&1; then
+        echo -e "${YELLOW}!${NC} 检测到 Mobius 正在运行，正在通知其安全保存并退出所有相关进程..."
         osascript -e 'tell application "Mobius" to quit' >/dev/null 2>&1 || true
         sleep 1
+        pkill -f "Mobius.app" >/dev/null 2>&1 || true
+        pkill -x "Mobius" >/dev/null 2>&1 || true
+        killall "Mobius Helper" >/dev/null 2>&1 || true
         killall "Mobius" >/dev/null 2>&1 || true
     fi
 fi
@@ -208,7 +211,21 @@ echo "$LATEST_TAG" | $USE_SUDO tee "${TARGET_DIR}/${APP_NAME}.app/Contents/.mobi
 echo -e "${CYAN}→${NC} Removing Gatekeeper quarantine attributes..."
 $USE_SUDO xattr -cr "${TARGET_DIR}/${APP_NAME}.app" 2>/dev/null || true
 
-# 10. Ad-hoc Sign if needed
+# 10. Ensure Latest Transparent Application Icon
+echo -e "${CYAN}→${NC} Ensuring latest transparent application icon..."
+RAW_ICNS_URL="https://raw.githubusercontent.com/2441630833/Mobius-vscode/main/resources/darwin/code.icns"
+ICNS_TEMP="$TEMP_DIR/code.icns"
+if curl -fsSL -o "$ICNS_TEMP" "$RAW_ICNS_URL" 2>/dev/null && [ -s "$ICNS_TEMP" ]; then
+    for icon_name in "Code.icns" "Code - OSS.icns" "Mobius.icns" "mobius.icns" "electron.icns"; do
+        $USE_SUDO cp -f "$ICNS_TEMP" "${TARGET_DIR}/${APP_NAME}.app/Contents/Resources/$icon_name" 2>/dev/null || true
+    done
+fi
+
+# 11. Touch App Bundle & Refresh macOS Icon Cache
+$USE_SUDO touch "${TARGET_DIR}/${APP_NAME}.app" 2>/dev/null || true
+killall Dock >/dev/null 2>&1 || true
+
+# 12. Ad-hoc Sign if needed
 if command -v codesign >/dev/null 2>&1; then
     $USE_SUDO codesign --force --deep --sign - "${TARGET_DIR}/${APP_NAME}.app" 2>/dev/null || true
 fi
