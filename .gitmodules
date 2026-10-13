@@ -49,9 +49,6 @@
 [submodule "Claude-Code-Game-Studios"]
 	path = Claude-Code-Game-Studios
 	url = https://github.com/Donchitos/Claude-Code-Game-Studios.git
-[submodule "GameFactory-3A"]
-	path = GameFactory-3A
-	url = https://github.com/OpenDCAI/GameFactory-3A.git
 [submodule "godogen"]
 	path = godogen
 	url = https://github.com/htdt/godogen.git
