@@ -495,6 +495,72 @@
         observer.observe(video);
       }
     })();
+
+    // 3. Dynamic Auto-Update for Mobius Desktop Downloads
+    (function () {
+      const repo = "2441630833/Mobius";
+      const apiUrl = "https://api.github.com/repos/" + repo + "/releases";
+
+      fetch(apiUrl, { headers: { "Accept": "application/vnd.github.v3+json" } })
+        .then(function (res) {
+          if (!res.ok) throw new Error("GitHub API status " + res.status);
+          return res.json();
+        })
+        .then(function (releases) {
+          if (!Array.isArray(releases) || releases.length === 0) return;
+
+          let winAsset = null, macAsset = null, linuxAsset = null;
+
+          for (let i = 0; i < releases.length; i++) {
+            const rel = releases[i];
+            const assets = rel.assets || [];
+
+            for (let j = 0; j < assets.length; j++) {
+              const a = assets[j];
+              const name = (a.name || "").toLowerCase();
+
+              if (!winAsset && name.endsWith(".exe")) {
+                winAsset = { url: a.browser_download_url, name: a.name, tag: rel.tag_name };
+              }
+              // Prefer DMG over ZIP for macOS
+              if (name.endsWith(".dmg")) {
+                macAsset = { url: a.browser_download_url, name: a.name, tag: rel.tag_name };
+              } else if (!macAsset && name.endsWith(".zip") && (name.includes("darwin") || name.includes("macos") || name.includes("mac"))) {
+                macAsset = { url: a.browser_download_url, name: a.name, tag: rel.tag_name };
+              }
+              // Prefer DEB over tar.gz for Linux
+              if (name.endsWith(".deb")) {
+                linuxAsset = { url: a.browser_download_url, name: a.name, tag: rel.tag_name };
+              } else if (!linuxAsset && name.endsWith(".tar.gz") && name.includes("linux")) {
+                linuxAsset = { url: a.browser_download_url, name: a.name, tag: rel.tag_name };
+              }
+            }
+
+            if (winAsset && macAsset && linuxAsset) break;
+          }
+
+          const winBtn = document.querySelector(".download-btn--win");
+          if (winBtn && winAsset) {
+            winBtn.href = winAsset.url;
+            winBtn.title = "Download Mobius for Windows (" + (winAsset.tag ? winAsset.tag + " · " : "") + winAsset.name + ")";
+          }
+
+          const macBtn = document.querySelector(".download-btn--mac");
+          if (macBtn && macAsset) {
+            macBtn.href = macAsset.url;
+            macBtn.title = "Download Mobius for macOS (" + (macAsset.tag ? macAsset.tag + " · " : "") + macAsset.name + ")";
+          }
+
+          const linuxBtn = document.querySelector(".download-btn--linux");
+          if (linuxBtn && linuxAsset) {
+            linuxBtn.href = linuxAsset.url;
+            linuxBtn.title = "Download Mobius for Linux (" + (linuxAsset.tag ? linuxAsset.tag + " · " : "") + linuxAsset.name + ")";
+          }
+        })
+        .catch(function () {
+          // Gracefully fallback to pre-configured static URLs
+        });
+    })();
   </script>
 </body>
 </html>
