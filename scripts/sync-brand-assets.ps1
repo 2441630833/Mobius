@@ -430,10 +430,10 @@ $faviconInputs = @(16, 32, 48) | ForEach-Object { Join-Path $tempDir "logo-$_.pn
 $faviconDest = Join-Path $VsCodeDir "resources\server\favicon.ico"
 Save-PngAsIco -PngPaths $faviconInputs -OutputPath $faviconDest
 
-# Generate macOS code.icns from logo (optional helper if missing)
+# Generate macOS code.icns from logo (if Python PIL is available)
 $pyScript = Join-Path $Root "scripts\generate-mac-icns.py"
 $targetIcns = Join-Path $VsCodeDir "resources\darwin\code.icns"
-if ((Test-Path $pyScript) -and (-not (Test-Path $targetIcns))) {
+if (Test-Path $pyScript) {
     $pyExe = if (Get-Command py -ErrorAction SilentlyContinue) { "py" } elseif (Get-Command python3 -ErrorAction SilentlyContinue) { "python3" } else { "python" }
     & $pyExe -c "import PIL" 2>$null
     if ($LASTEXITCODE -eq 0) {

@@ -1,94 +1,77 @@
 #!/usr/bin/env python3
 """
 Generate Apple macOS .icns icon for Mobius IDE.
-Complies with Apple Human Interface Guidelines for macOS Big Sur, Monterey, Ventura, Sonoma, Sequoia:
-- 1024x1024 master canvas
-- 824x824 squircle body with continuous 185px corner radius
-- Native macOS drop shadow with subtle blur & offset
-- Sleek dark slate gradient (#242630 -> #14151b) matching developer IDE aesthetic
-- Subtle top-edge inner light refraction highlight
-- High-contrast, vibrant 3D Mobius infinity strip centered perfectly
+Complies with Apple Human Interface Guidelines for free-form icons on macOS:
+- 1024x1024 master canvas with 100% transparent background (no solid squircle/background box)
+- Centered Mobius infinity ribbon logo with crisp proportions
+- Soft silhouette drop shadow adhering to macOS native lighting (offset +12px, blur 14px, low opacity)
+- High-quality multi-resolution mipmaps (16x16, 32x32, 64x64, 128x128, 256x256, 512x512, 1024x1024)
 """
 
+import io
 import os
+import struct
 import sys
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageFilter
 import numpy as np
 
-def generate_mac_icns(logo_path: str, output_icns_path: str):
+
+def generate_mac_icns(logo_path: str, output_icns_path: str) -> bool:
     if not os.path.exists(logo_path):
         print(f"[ERROR] Source logo not found: {logo_path}", file=sys.stderr)
         return False
 
     logo = Image.open(logo_path).convert('RGBA')
 
-    canvas_size = 1024
-    tile_w, tile_h = 824, 824
-    radius = 185
-    margin_x = (canvas_size - tile_w) // 2
-    margin_y = (canvas_size - tile_h) // 2
+    # Trim any empty transparent margins in the source logo for accurate centering
+    bbox = logo.getbbox()
+    if bbox:
+        logo = logo.crop(bbox)
 
+    canvas_size = 1024
+    # Standard macOS icon width for wide horizontal shapes (matches VS Code 864px)
+    target_w = 864
+    ratio = target_w / float(logo.width)
+    target_h = int(round(logo.height * ratio))
+    logo_resized = logo.resize((target_w, target_h), Image.Resampling.LANCZOS)
+
+    pos_x = (canvas_size - target_w) // 2
+    pos_y = (canvas_size - target_h) // 2
+
+    # 1. Base canvas with 100% transparent background
     canvas = Image.new('RGBA', (canvas_size, canvas_size), (0, 0, 0, 0))
 
-    # 1. Native macOS drop shadow (y offset +20, blur 28, opacity ~40%)
-    shadow_mask = Image.new('RGBA', (canvas_size, canvas_size), (0, 0, 0, 0))
-    s_draw = ImageDraw.Draw(shadow_mask)
-    s_draw.rounded_rectangle(
-        [margin_x, margin_y + 20, margin_x + tile_w, margin_y + tile_h + 20],
-        radius=radius,
-        fill=(0, 0, 0, 100)
-    )
-    shadow = shadow_mask.filter(ImageFilter.GaussianBlur(28))
-    canvas.paste(shadow, (0, 0), shadow)
+    # 2. Subtle silhouette contact shadow following Apple HIG for free-form icons
+    # Offset y +12px, blur 14px, max opacity ~22% (56/255)
+    logo_alpha = logo_resized.getchannel('A')
+    shadow_alpha_canvas = Image.new('L', (canvas_size, canvas_size), 0)
+    shadow_alpha_canvas.paste(logo_alpha, (pos_x, pos_y + 12))
+    shadow_blurred = shadow_alpha_canvas.filter(ImageFilter.GaussianBlur(14))
 
-    # 2. Squircle tile with dark slate gradient (#242630 -> #14151b)
-    mask = Image.new('L', (tile_w, tile_h), 0)
-    m_draw = ImageDraw.Draw(mask)
-    m_draw.rounded_rectangle([0, 0, tile_w, tile_h], radius=radius, fill=255)
+    s_arr = (np.array(shadow_blurred, dtype=np.float32) * (56.0 / 255.0)).astype(np.uint8)
+    shadow_layer = Image.new('RGBA', (canvas_size, canvas_size), (0, 0, 0, 0))
+    shadow_layer.putalpha(Image.fromarray(s_arr, mode='L'))
 
-    arr = np.zeros((tile_h, tile_w, 4), dtype=np.uint8)
-    top_color = np.array([36, 38, 48], dtype=np.float32)
-    bot_color = np.array([20, 21, 27], dtype=np.float32)
-    for y in range(tile_h):
-        factor = y / float(tile_h)
-        col = top_color * (1.0 - factor) + bot_color * factor
-        arr[y, :, 0] = int(col[0])
-        arr[y, :, 1] = int(col[1])
-        arr[y, :, 2] = int(col[2])
-        arr[y, :, 3] = 255
+    canvas.paste(shadow_layer, (0, 0), shadow_layer)
 
-    grad_img = Image.fromarray(arr, 'RGBA')
-    tile_masked = Image.new('RGBA', (tile_w, tile_h), (0, 0, 0, 0))
-    tile_masked.paste(grad_img, (0, 0), mask)
-
-    # 3. Inner border highlight
-    border_draw = ImageDraw.Draw(tile_masked)
-    border_draw.rounded_rectangle(
-        [0, 0, tile_w - 1, tile_h - 1],
-        radius=radius,
-        outline=(255, 255, 255, 28),
-        width=2
-    )
-
-    canvas.paste(tile_masked, (margin_x, margin_y), tile_masked)
-
-    # 4. Mobius infinity logo centered
-    logo_w = 660
-    ratio = logo_w / float(logo.width)
-    logo_h = int(logo.height * ratio)
-    logo_resized = logo.resize((logo_w, logo_h), Image.LANCZOS)
-
-    pos_x = (canvas_size - logo_w) // 2
-    pos_y = (canvas_size - logo_h) // 2
+    # 3. Paste Mobius infinity ribbon logo directly on top
     canvas.paste(logo_resized, (pos_x, pos_y), logo_resized)
+
+    # 4. Generate multi-resolution mipmaps with Lanczos resampling
+    mip_sizes = [512, 256, 128, 64, 32, 16]
+    append_images = []
+    for s in mip_sizes:
+        mip = canvas.resize((s, s), Image.Resampling.LANCZOS)
+        append_images.append(mip)
 
     # Ensure output directory exists
     os.makedirs(os.path.dirname(os.path.abspath(output_icns_path)), exist_ok=True)
 
-    # Save as macOS .icns
-    canvas.save(output_icns_path, format='ICNS')
-    print(f"[OK] Generated macOS icon: {output_icns_path} ({os.path.getsize(output_icns_path)} bytes)")
+    # Save as macOS .icns with bundled multi-resolution mipmaps
+    canvas.save(output_icns_path, format='ICNS', append_images=append_images)
+    print(f"[OK] Generated transparent macOS icon: {output_icns_path} ({os.path.getsize(output_icns_path)} bytes)")
     return True
+
 
 if __name__ == '__main__':
     script_dir = os.path.dirname(os.path.abspath(__file__))
