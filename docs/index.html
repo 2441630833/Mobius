@@ -198,9 +198,464 @@
       color: var(--paper);
     }
 
+    /* FAST TERMINAL INSTALLER WIDGET */
+    .quick-install {
+      margin-top: 14px;
+      width: 100%;
+      max-width: 490px;
+      background: #141a16;
+      border: 1px solid rgba(43, 58, 48, 0.35);
+      border-radius: 12px;
+      box-shadow: 0 10px 30px -10px rgba(20, 26, 22, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      text-align: left;
+    }
+
+    .quick-install__topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 12px 8px;
+      background: rgba(255, 255, 255, 0.025);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .quick-install__window-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .window-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+      opacity: 0.85;
+    }
+
+    .window-dot--close { background: #ea695d; }
+    .window-dot--min { background: #f4be4f; }
+    .window-dot--max { background: #62c554; }
+
+    .quick-install__meta {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 500;
+      color: #8c9d92;
+      font-family: var(--sans);
+      letter-spacing: 0.02em;
+    }
+
+    .quick-install__term-icon {
+      width: 12px;
+      height: 12px;
+      stroke: #72877a;
+    }
+
+    .quick-install__badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 9.5px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      padding: 1px 5px;
+      border-radius: 999px;
+      background: rgba(98, 197, 84, 0.16);
+      color: #7ee785;
+      border: 1px solid rgba(98, 197, 84, 0.3);
+      line-height: 1.3;
+      margin-left: 2px;
+    }
+
+    .quick-install__tabs {
+      display: flex;
+      gap: 3px;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 2px;
+      border-radius: 6px;
+    }
+
+    .quick-tab-btn {
+      background: none;
+      border: none;
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 500;
+      color: #9ab0a2;
+      padding: 2.5px 7px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .quick-tab-btn:hover {
+      color: #e2ede6;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .quick-tab-btn.active {
+      background: #2b3a30;
+      color: #f1f5f2;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    .quick-tab-btn .os-icon {
+      width: 11px;
+      height: 11px;
+      fill: currentColor;
+      flex-shrink: 0;
+    }
+
+    .quick-install__body {
+      padding: 10px 12px;
+    }
+
+    .quick-install__code-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #0d120f;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 7px;
+      padding: 7px 10px;
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 11.5px;
+      line-height: 1.4;
+      color: #d6e2db;
+    }
+
+    .quick-install__prompt {
+      color: #5bb974;
+      font-weight: 600;
+      user-select: none;
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    .quick-install__code-row code {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+      color: #e6f0ea;
+      font-family: inherit;
+    }
+
+    .quick-install__copy {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #e2ede6;
+      border-radius: 5px;
+      padding: 3px 9px;
+      font-size: 11px;
+      font-family: var(--sans);
+      font-weight: 500;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.18s ease;
+    }
+
+    .quick-install__copy:hover {
+      background: rgba(255, 255, 255, 0.18);
+      border-color: rgba(255, 255, 255, 0.28);
+      color: #fff;
+    }
+
+    .quick-install__copy.copied {
+      background: rgba(46, 125, 50, 0.25);
+      border-color: #5db77f;
+      color: #6ee7b7;
+    }
+
+    .quick-install__copy svg {
+      width: 12px;
+      height: 12px;
+      flex-shrink: 0;
+    }
+
+    .quick-install__footer {
+      padding: 7px 12px 9px;
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+      background: rgba(0, 0, 0, 0.12);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .quick-install__note {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      font-size: 11px;
+      color: #92a499;
+      line-height: 1.4;
+      text-align: center;
+    }
+
+    .quick-install__note .note-icon {
+      width: 12px;
+      height: 12px;
+      stroke: #6fa080;
+      flex-shrink: 0;
+    }
+
+    .mac-guide-trigger {
+      background: none;
+      border: none;
+      color: #8fa597;
+      font-size: 11.5px;
+      cursor: pointer;
+      padding: 3px 6px;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.18s ease;
+      font-family: var(--sans);
+    }
+
+    .mac-guide-trigger .trigger-shield-icon {
+      width: 12px;
+      height: 12px;
+      stroke: #6fa080;
+      flex-shrink: 0;
+    }
+
+    .mac-guide-trigger .trigger-arrow {
+      color: #6fa080;
+      font-weight: 600;
+      transition: transform 0.18s ease;
+    }
+
+    .mac-guide-trigger:hover {
+      color: #dbe7df;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .mac-guide-trigger:hover .trigger-arrow {
+      transform: translateX(2px);
+    }
+
+    @media (max-width: 480px) {
+      .quick-install__meta {
+        display: none;
+      }
+      .quick-install {
+        margin-top: 10px;
+      }
+    }
+
+    /* DIALOG MODAL: MAC GUIDE */
+    .mac-guide-modal {
+      border: 1px solid rgba(43, 58, 48, 0.2);
+      border-radius: 16px;
+      background: var(--paper);
+      color: var(--ink);
+      max-width: 520px;
+      width: 92vw;
+      padding: 24px 26px;
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+      position: fixed;
+      inset: 0;
+      margin: auto;
+    }
+
+    .mac-guide-modal::backdrop {
+      background: rgba(18, 26, 21, 0.6);
+      backdrop-filter: blur(8px);
+    }
+
+    .mac-guide-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .mac-guide-header-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mac-modal-icon {
+      width: 20px;
+      height: 20px;
+      fill: var(--ink);
+      flex-shrink: 0;
+    }
+
+    .mac-guide-header h3 {
+      margin: 0;
+      font-size: 17px;
+      font-family: var(--serif);
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .modal-close-btn {
+      background: none;
+      border: none;
+      font-size: 22px;
+      line-height: 1;
+      color: var(--ink);
+      cursor: pointer;
+      padding: 2px 8px;
+      border-radius: 6px;
+      opacity: 0.65;
+      transition: opacity 0.15s, background 0.15s;
+    }
+
+    .modal-close-btn:hover {
+      opacity: 1;
+      background: rgba(43, 58, 48, 0.08);
+    }
+
+    .mac-guide-intro {
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--ink-soft);
+      margin: 0 0 16px;
+      background: rgba(43, 58, 48, 0.04);
+      padding: 10px 12px;
+      border-radius: 8px;
+      border-left: 3px solid var(--ink);
+    }
+
+    .guide-method-card {
+      background: #fff;
+      border: 1px solid rgba(43, 58, 48, 0.14);
+      border-radius: 10px;
+      padding: 14px 16px;
+      position: relative;
+      box-shadow: 0 2px 6px rgba(43, 58, 48, 0.04);
+    }
+
+    .guide-method-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10.5px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: #2b3a30;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .guide-method-step {
+      margin: 0 0 8px;
+      font-size: 13px;
+      color: var(--ink);
+      line-height: 1.5;
+    }
+
+    .code-box {
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: #151b17;
+      color: #e2ede6;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .code-box code {
+      user-select: all;
+    }
+
+    .copy-inline-btn {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      color: #fff;
+      border-radius: 4px;
+      padding: 3px 9px;
+      font-size: 11px;
+      cursor: pointer;
+      font-family: var(--sans);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+
+    .copy-inline-btn:hover {
+      background: rgba(255, 255, 255, 0.22);
+    }
+
+    .copy-inline-btn.copied {
+      background: rgba(46, 125, 50, 0.35);
+      border-color: #5db77f;
+      color: #6ee7b7;
+    }
+
+    .guide-hint-box {
+      margin-top: 10px;
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      font-size: 11.5px;
+      line-height: 1.5;
+      color: #5c6e61;
+      background: rgba(43, 58, 48, 0.035);
+      padding: 8px 10px;
+      border-radius: 6px;
+    }
+
+    .guide-hint-icon {
+      font-size: 13px;
+      line-height: 1.3;
+      flex-shrink: 0;
+    }
+
+    .mac-guide-footer {
+      margin-top: 18px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .guide-done-btn {
+      background: var(--ink);
+      color: var(--paper);
+      border: none;
+      padding: 7px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: var(--sans);
+      transition: opacity 0.2s;
+    }
+
+    .guide-done-btn:hover {
+      opacity: 0.9;
+    }
+
     /* (d) NAV */
     .footer__nav {
-      margin-top: clamp(20px, 2.4vw, 32px);
+      margin-top: clamp(16px, 2vw, 24px);
     }
 
     .footer__nav ul {
@@ -433,6 +888,75 @@
         </div>
       </div>
 
+      <!-- QUICK ONE-LINE INSTALLER WIDGET -->
+      <div class="quick-install" role="region" aria-label="Terminal One-Line Fast Installer and Updater">
+        <div class="quick-install__topbar">
+          <div class="quick-install__window-controls" aria-hidden="true">
+            <span class="window-dot window-dot--close"></span>
+            <span class="window-dot window-dot--min"></span>
+            <span class="window-dot window-dot--max"></span>
+          </div>
+          <div class="quick-install__meta">
+            <svg class="quick-install__term-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
+            <span>一键安装 / 同步更新</span>
+            <span class="quick-install__badge" title="支持首次极速安装与本地已安装版本的就地无损同步更新">全新 · 同步更新</span>
+          </div>
+          <div class="quick-install__tabs" role="tablist">
+            <button type="button" class="quick-tab-btn active" data-os="mac" role="tab" aria-selected="true" title="macOS 一键安装与同步更新命令">
+              <svg class="os-icon os-icon--mac" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M11.673 7.222c-.876 0-2.232-.996-3.66-.96-1.884.024-3.612 1.092-4.584 2.784-1.956 3.396-.504 8.412 1.404 11.172.936 1.344 2.04 2.856 3.504 2.808 1.404-.06 1.932-.912 3.636-.912 1.692 0 2.172.912 3.66.876 1.512-.024 2.472-1.368 3.396-2.724 1.068-1.56 1.512-3.072 1.536-3.156-.036-.012-2.94-1.128-2.976-4.488-.024-2.808 2.292-4.152 2.4-4.212-1.32-1.932-3.348-2.148-4.056-2.196-1.848-.144-3.396 1.008-4.26 1.008zm3.12-2.832c.78-.936 1.296-2.244 1.152-3.54-1.116.048-2.46.744-3.264 1.68-.72.828-1.344 2.16-1.176 3.432 1.236.096 2.508-.636 3.288-1.572z"/>
+              </svg>
+              <span>macOS</span>
+            </button>
+            <button type="button" class="quick-tab-btn" data-os="win" role="tab" aria-selected="false" title="Windows 一键安装与同步更新命令">
+              <svg class="os-icon os-icon--win" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3.001 5.479l7.377-1.016v7.127H3.001V5.479zm0 13.042l7.377 1.016v-7.039H3.001v6.023zm8.188 1.125L21 21v-8.502h-9.811v7.148zm0-15.292v7.236H21V3l-9.811 1.354z"/>
+              </svg>
+              <span>Windows</span>
+            </button>
+            <button type="button" class="quick-tab-btn" data-os="linux" role="tab" aria-selected="false" title="Linux 一键安装与同步更新命令">
+              <svg class="os-icon os-icon--linux" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a.424.424 0 00-.11.135c-.26.268-.45.6-.663.839-.199.199-.485.267-.797.4-.313.136-.658.269-.864.68-.09.189-.136.394-.132.602 0 .199.027.4.055.536.058.399.116.728.04.97-.249.68-.28 1.145-.106 1.484.174.334.535.47.94.601.81.2 1.91.135 2.774.6.926.466 1.866.67 2.616.47.526-.116.97-.464 1.208-.946.587-.003 1.23-.269 2.26-.334.699-.058 1.574.267 2.577.2.025.134.063.198.114.333l.003.003c.391.778 1.113 1.132 1.884 1.071.771-.06 1.592-.536 2.257-1.306.631-.765 1.683-1.084 2.378-1.503.348-.199.629-.469.649-.853.023-.4-.2-.811-.714-1.376v-.097l-.003-.003c-.17-.2-.25-.535-.338-.926-.085-.401-.182-.786-.492-1.046h-.003c-.059-.054-.123-.067-.188-.135a.357.357 0 00-.19-.064c.431-1.278.264-2.55-.173-3.694-.533-1.41-1.465-2.638-2.175-3.483-.796-1.005-1.576-1.957-1.56-3.368.026-2.152.236-6.133-3.544-6.139zm.529 3.405h.013c.213 0 .396.062.584.198.19.135.33.332.438.533.105.259.158.459.166.724 0-.02.006-.04.006-.06v.105a.086.086 0 01-.004-.021l-.004-.024a1.807 1.807 0 01-.15.706.953.953 0 01-.213.335.71.71 0 00-.088-.042c-.104-.045-.198-.064-.284-.133a1.312 1.312 0 00-.22-.066c.05-.06.146-.133.183-.198.053-.128.082-.264.088-.402v-.02a1.21 1.21 0 00-.061-.4c-.045-.134-.101-.2-.183-.333-.084-.066-.167-.132-.267-.132h-.016c-.093 0-.176.03-.262.132a.8.8 0 00-.205.334 1.18 1.18 0 00-.09.4v.019c.002.089.008.179.02.267-.193-.067-.438-.135-.607-.202a1.635 1.635 0 01-.018-.2v-.02a1.772 1.772 0 01.15-.768c.082-.22.232-.406.43-.533a.985.985 0 01.594-.2zm-2.962.059h.036c.142 0 .27.048.399.135.146.129.264.288.344.465.09.199.14.4.153.667v.004c.007.134.006.2-.002.266v.08c-.03.007-.056.018-.083.024-.152.055-.274.135-.393.2.012-.09.013-.18.003-.267v-.015c-.012-.133-.04-.2-.082-.333a.613.613 0 00-.166-.267.248.248 0 00-.183-.064h-.021c-.071.006-.13.04-.186.132a.552.552 0 00-.12.27.944.944 0 00-.023.33v.015c.012.135.037.2.08.334.046.134.098.2.166.268.01.009.02.018.034.024-.07.057-.117.07-.176.136a.304.304 0 01-.131.068 2.62 2.62 0 01-.275-.402 1.772 1.772 0 01-.155-.667 1.759 1.759 0 01.08-.668 1.43 1.43 0 01.283-.535c.128-.133.26-.2.418-.2zm1.37 1.706c.332 0 .733.065 1.216.399.293.2.523.269 1.052.468h.003c.255.136.405.266.478.399v-.131a.571.571 0 01.016.47c-.123.31-.516.643-1.063.842v.002c-.268.135-.501.333-.775.465-.276.135-.588.292-1.012.267a1.139 1.139 0 01-.448-.067 3.566 3.566 0 01-.322-.198c-.195-.135-.363-.332-.612-.465v-.005h-.005c-.4-.246-.616-.512-.686-.71-.07-.268-.005-.47.193-.6.224-.135.38-.271.483-.336.104-.074.143-.102.176-.131h.002v-.003c.169-.202.436-.47.839-.601.139-.036.294-.065.466-.065z"/>
+              </svg>
+              <span>Linux</span>
+            </button>
+          </div>
+        </div>
+        <div class="quick-install__body">
+          <div class="quick-install__code-row">
+            <span class="quick-install__prompt" id="installPrompt" aria-hidden="true">$</span>
+            <code id="installCmd">curl -fsSL https://raw.githubusercontent.com/2441630833/Mobius/main/scripts/install-mac.sh | bash</code>
+            <button type="button" class="quick-install__copy" id="copyInstallBtn" aria-label="复制一键安装与同步更新命令" title="复制">
+              <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span class="copy-btn-text">复制</span>
+            </button>
+          </div>
+        </div>
+        <div class="quick-install__footer">
+          <div class="quick-install__note">
+            <svg class="note-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <polyline points="1 20 1 14 7 14"></polyline>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+            <span>支持首次极速安装 · 本地已安装则自动同步更新至最新版</span>
+          </div>
+          <button type="button" class="mac-guide-trigger" id="openMacGuide">
+            <svg class="trigger-shield-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <span>macOS 提示“无法验证恶意软件”？3 秒放行指南</span>
+            <span class="trigger-arrow" aria-hidden="true">→</span>
+          </button>
+        </div>
+      </div>
+
       <!-- (d) NAV (8 EXACT ITEMS) -->
       <nav class="footer__nav" aria-label="Footer">
         <ul>
@@ -451,6 +975,52 @@
       <p class="footer__copy">© <span id="year">2026</span> <a href="https://github.com/2441630833/Mobius">Mobius Works Ltd.</a></p>
     </div>
   </footer>
+
+  <!-- MAC GATEKEEPER GUIDE DIALOG (METHOD 1 ONLY) -->
+  <dialog class="mac-guide-modal" id="macGuideModal" aria-labelledby="macGuideTitle">
+    <div class="mac-guide-modal__inner">
+      <div class="mac-guide-header">
+        <div class="mac-guide-header-title">
+          <svg class="mac-modal-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M11.673 7.222c-.876 0-2.232-.996-3.66-.96-1.884.024-3.612 1.092-4.584 2.784-1.956 3.396-.504 8.412 1.404 11.172.936 1.344 2.04 2.856 3.504 2.808 1.404-.06 1.932-.912 3.636-.912 1.692 0 2.172.912 3.66.876 1.512-.024 2.472-1.368 3.396-2.724 1.068-1.56 1.512-3.072 1.536-3.156-.036-.012-2.94-1.128-2.976-4.488-.024-2.808 2.292-4.152 2.4-4.212-1.32-1.932-3.348-2.148-4.056-2.196-1.848-.144-3.396 1.008-4.26 1.008zm3.12-2.832c.78-.936 1.296-2.244 1.152-3.54-1.116.048-2.46.744-3.264 1.68-.72.828-1.344 2.16-1.176 3.432 1.236.096 2.508-.636 3.288-1.572z"/>
+          </svg>
+          <h3 id="macGuideTitle">macOS 首次打开放行指南</h3>
+        </div>
+        <button type="button" class="modal-close-btn" id="closeMacGuide" aria-label="关闭">&times;</button>
+      </div>
+      <p class="mac-guide-intro">
+        由于 Mobius 为免费开源软件，尚未向 Apple 购买高额年费公证证书。从浏览器下载后首次打开若提示 <em>“无法验证是否包含恶意软件”</em> 属于 macOS Gatekeeper 正常拦截，只需运行一行命令即可彻底解除：
+      </p>
+
+      <div class="guide-method-card">
+        <div class="guide-method-badge">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          <span>一步解除 · 永久生效</span>
+        </div>
+        <p class="guide-method-step">将 Mobius 拖入「应用程序」后，打开 Mac「终端 (Terminal)」并运行：</p>
+        <div class="code-box">
+          <code>sudo xattr -cr /Applications/Mobius.app</code>
+          <button type="button" class="copy-inline-btn" data-copy="sudo xattr -cr /Applications/Mobius.app" title="复制放行命令">
+            <svg class="copy-inline-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            <span class="copy-inline-text">复制</span>
+          </button>
+        </div>
+        <div class="guide-hint-box">
+          <span class="guide-hint-icon">💡</span>
+          <span>输入 Mac 锁屏开机密码后回车即可（输入密码时屏幕不会显示字符，直接输完回车）。之后双击 Mobius 图标直接秒开，永久不再拦截！</span>
+        </div>
+      </div>
+
+      <div class="mac-guide-footer">
+        <button type="button" class="guide-done-btn" id="doneMacGuide">我知道了</button>
+      </div>
+    </div>
+  </dialog>
 
   <!-- 8. JAVASCRIPT -->
   <script>
@@ -552,6 +1122,139 @@
         .catch(function () {
           // Gracefully fallback to pre-configured static URLs
         });
+    })();
+
+    // 4. One-Line Fast Installer Tab Switcher & Copy Handlers
+    (function () {
+      const commands = {
+        mac: "curl -fsSL https://raw.githubusercontent.com/2441630833/Mobius/main/scripts/install-mac.sh | bash",
+        win: "irm https://raw.githubusercontent.com/2441630833/Mobius/main/scripts/install-win.ps1 | iex",
+        linux: "curl -fsSL https://raw.githubusercontent.com/2441630833/Mobius/main/scripts/install-linux.sh | bash"
+      };
+
+      const prompts = {
+        mac: "$",
+        win: "PS >",
+        linux: "$"
+      };
+
+      const tabs = document.querySelectorAll(".quick-tab-btn");
+      const cmdEl = document.getElementById("installCmd");
+      const promptEl = document.getElementById("installPrompt");
+      const copyBtn = document.getElementById("copyInstallBtn");
+
+      let currentOs = "mac";
+
+      tabs.forEach(function (tab) {
+        tab.addEventListener("click", function () {
+          tabs.forEach(function (t) {
+            t.classList.remove("active");
+            t.setAttribute("aria-selected", "false");
+          });
+          tab.classList.add("active");
+          tab.setAttribute("aria-selected", "true");
+          currentOs = tab.getAttribute("data-os") || "mac";
+          if (cmdEl && commands[currentOs]) {
+            cmdEl.textContent = commands[currentOs];
+          }
+          if (promptEl && prompts[currentOs]) {
+            promptEl.textContent = prompts[currentOs];
+          }
+          const macGuideBtn = document.getElementById("openMacGuide");
+          if (macGuideBtn) {
+            macGuideBtn.style.display = (currentOs === "mac") ? "inline-flex" : "none";
+          }
+        });
+      });
+
+      const checkSvg = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+
+      function copyText(text, btn, isInline) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () {
+            showCopied(btn, isInline);
+          }).catch(function () {
+            fallbackCopy(text, btn, isInline);
+          });
+        } else {
+          fallbackCopy(text, btn, isInline);
+        }
+      }
+
+      function fallbackCopy(text, btn, isInline) {
+        const temp = document.createElement("textarea");
+        temp.value = text;
+        temp.style.position = "fixed";
+        temp.style.opacity = "0";
+        document.body.appendChild(temp);
+        temp.select();
+        try {
+          document.execCommand("copy");
+          showCopied(btn, isInline);
+        } catch (e) {}
+        document.body.removeChild(temp);
+      }
+
+      function showCopied(btn, isInline) {
+        if (!btn) return;
+        const originalHtml = btn.innerHTML;
+        btn.classList.add("copied");
+        btn.innerHTML = checkSvg + "<span>已复制</span>";
+        setTimeout(function () {
+          btn.classList.remove("copied");
+          btn.innerHTML = originalHtml;
+        }, 2200);
+      }
+
+      if (copyBtn && cmdEl) {
+        copyBtn.addEventListener("click", function () {
+          copyText(cmdEl.textContent.trim(), copyBtn, false);
+        });
+      }
+
+      document.querySelectorAll(".copy-inline-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          const text = btn.getAttribute("data-copy") || "";
+          copyText(text, btn, true);
+        });
+      });
+
+      // 5. macOS Guide Modal
+      const modal = document.getElementById("macGuideModal");
+      const openBtn = document.getElementById("openMacGuide");
+      const closeBtn = document.getElementById("closeMacGuide");
+      const doneBtn = document.getElementById("doneMacGuide");
+
+      if (modal && openBtn) {
+        openBtn.addEventListener("click", function () {
+          if (typeof modal.showModal === "function") {
+            modal.showModal();
+          } else {
+            modal.setAttribute("open", "");
+          }
+        });
+      }
+
+      function closeModal() {
+        if (modal) {
+          if (typeof modal.close === "function") {
+            modal.close();
+          } else {
+            modal.removeAttribute("open");
+          }
+        }
+      }
+
+      if (closeBtn) closeBtn.addEventListener("click", closeModal);
+      if (doneBtn) doneBtn.addEventListener("click", closeModal);
+
+      if (modal) {
+        modal.addEventListener("click", function (e) {
+          if (e.target === modal) {
+            closeModal();
+          }
+        });
+      }
     })();
   </script>
 </body>

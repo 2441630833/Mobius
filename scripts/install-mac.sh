@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Mobius IDE — macOS One-Line Fast Installer
+# Mobius IDE — macOS One-Line Fast Installer & Auto-Updater
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/2441630833/Mobius/main/scripts/install-mac.sh | bash
+#
+# Flags / Options:
+#   curl -fsSL .../install-mac.sh | bash -s -- --force   # Force re-download & reinstall
+#   MOBIUS_FORCE=1 curl -fsSL .../install-mac.sh | bash  # Force via environment variable
 # =============================================================================
 
 set -e
@@ -18,7 +22,28 @@ RED='\033[0;31m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-echo -e "\n${CYAN}${BOLD}=== Installing Mobius for macOS ===${NC}\n"
+FORCE=false
+CHECK_ONLY=false
+
+for arg in "$@"; do
+    case "$arg" in
+        --force|-f)
+            FORCE=true
+            ;;
+        --check)
+            CHECK_ONLY=true
+            ;;
+    esac
+done
+
+if [ "${MOBIUS_FORCE:-0}" = "1" ]; then
+    FORCE=true
+fi
+if [ "${MOBIUS_CHECK:-0}" = "1" ]; then
+    CHECK_ONLY=true
+fi
+
+echo -e "\n${CYAN}${BOLD}=== Mobius: macOS Fast Installer & Auto-Updater ===${NC}\n"
 
 # 1. Detect Architecture
 ARCH="$(uname -m)"
@@ -37,7 +62,7 @@ case "$ARCH" in
         ;;
 esac
 
-# 2. Determine Target Directory
+# 2. Determine Target Directory & Detect Existing Installation
 TARGET_DIR="/Applications"
 if [ ! -w "$TARGET_DIR" ]; then
     echo -e "${YELLOW}!${NC} $TARGET_DIR is not writable by current user. Will use sudo for installation."
@@ -46,11 +71,34 @@ else
     USE_SUDO=""
 fi
 
-# 3. Resolve Latest Release Information
-echo -e "${CYAN}→${NC} Fetching latest release information..."
-RELEASE_DATA=$(curl -s "https://api.github.com/repos/${REPO}/releases" || true)
+INSTALLED_APP="${TARGET_DIR}/${APP_NAME}.app"
+IS_INSTALLED=false
+INSTALLED_VER=""
+INSTALLED_TAG=""
 
-# Try to find DMG for this architecture, fallback to tag if needed
+if [ -d "$INSTALLED_APP" ]; then
+    IS_INSTALLED=true
+    if [ -f "$INSTALLED_APP/Contents/Info.plist" ]; then
+        INSTALLED_VER=$(defaults read "$INSTALLED_APP/Contents/Info.plist" CFBundleShortVersionString 2>/dev/null || true)
+    fi
+    if [ -f "$INSTALLED_APP/Contents/.mobius-installed-tag" ]; then
+        INSTALLED_TAG=$(cat "$INSTALLED_APP/Contents/.mobius-installed-tag" 2>/dev/null | tr -d '[:space:]' || true)
+    fi
+    echo -e "${GREEN}✓${NC} Detected local installation: ${BOLD}${INSTALLED_APP}${NC}"
+    echo -e "  - Current Version: ${INSTALLED_VER:-Installed} ${INSTALLED_TAG:+[$INSTALLED_TAG]}"
+fi
+
+# 3. Resolve Latest Release Information
+echo -e "${CYAN}→${NC} Fetching latest release information from GitHub..."
+RELEASE_DATA=$(curl -s -H "User-Agent: Mobius-Installer-macOS" "https://api.github.com/repos/${REPO}/releases" || true)
+
+# Extract latest release tag
+LATEST_TAG=$(echo "$RELEASE_DATA" | grep -o '"tag_name": *"[^"]*"' | head -n 1 | cut -d'"' -f4 || true)
+if [ -z "$LATEST_TAG" ]; then
+    LATEST_TAG="v1.0.4"
+fi
+
+# Try to find DMG for this architecture, fallback to zip
 DOWNLOAD_URL=$(echo "$RELEASE_DATA" | grep -o "https://[^\"]*macOS-${MAC_ARCH}\.dmg" | head -n 1 || true)
 if [ -z "$DOWNLOAD_URL" ]; then
     DOWNLOAD_URL=$(echo "$RELEASE_DATA" | grep -o "https://[^\"]*darwin-${MAC_ARCH}\.zip" | head -n 1 || true)
@@ -61,19 +109,64 @@ if [ -z "$DOWNLOAD_URL" ]; then
     DOWNLOAD_URL="https://github.com/${REPO}/releases/download/v1.0.4/Mobius-1.126.0-macOS-${MAC_ARCH}.dmg"
 fi
 
-echo -e "${GREEN}✓${NC} Download URL resolved: $DOWNLOAD_URL"
+echo -e "${GREEN}✓${NC} Remote Release: ${BOLD}${LATEST_TAG}${NC}"
+echo -e "${CYAN}→${NC} Download URL: $DOWNLOAD_URL"
 
-# 4. Download Asset
+# 4. Check If Already Up to Date
+NEEDS_UPDATE=false
+if [ "$IS_INSTALLED" = false ]; then
+    NEEDS_UPDATE=true
+elif [ "$FORCE" = true ]; then
+    NEEDS_UPDATE=true
+else
+    if [ -n "$INSTALLED_TAG" ] && [ "$INSTALLED_TAG" = "$LATEST_TAG" ]; then
+        NEEDS_UPDATE=false
+    else
+        NEEDS_UPDATE=true
+    fi
+fi
+
+if [ "$CHECK_ONLY" = true ]; then
+    if [ "$NEEDS_UPDATE" = true ]; then
+        echo -e "\n${YELLOW}[Update Available] Latest: ${LATEST_TAG}${NC}"
+    else
+        echo -e "\n${GREEN}[Up to Date] Mobius is already up to date (${LATEST_TAG}).${NC}"
+    fi
+    exit 0
+fi
+
+if [ "$NEEDS_UPDATE" = false ]; then
+    echo -e "\n${GREEN}${BOLD}✓ 本地 Mobius 已是最新版本 (${LATEST_TAG})！无需重复下载。${NC}"
+    echo -e "  - 安装路径: ${INSTALLED_APP}"
+    echo -e "  - 启动命令: ${CYAN}open /Applications/Mobius.app${NC}"
+    echo -e "  - 若需强制重新下载安装/修复，可运行:"
+    echo -e "    ${YELLOW}curl -fsSL https://raw.githubusercontent.com/${REPO}/main/scripts/install-mac.sh | bash -s -- --force${NC}\n"
+    exit 0
+fi
+
+# 5. Handle Running Processes Before Overwriting
+if [ "$IS_INSTALLED" = true ]; then
+    echo -e "\n${CYAN}=== 正在准备同步更新 Mobius ===${NC}"
+    echo -e "准备从 ${INSTALLED_VER:-已安装} (${INSTALLED_TAG:-未知}) 升级至最新版本 ${BOLD}${LATEST_TAG}${NC}..."
+    if pgrep -x "Mobius" >/dev/null 2>&1; then
+        echo -e "${YELLOW}!${NC} 检测到 Mobius 正在运行，正在通知其安全保存并退出..."
+        osascript -e 'tell application "Mobius" to quit' >/dev/null 2>&1 || true
+        sleep 1
+        killall "Mobius" >/dev/null 2>&1 || true
+    fi
+fi
+
+# 6. Download Asset
 TEMP_DIR="$(mktemp -d -t mobius-install-XXXXXX)"
 trap 'rm -rf "$TEMP_DIR"' EXIT
 
 FILE_NAME="$(basename "$DOWNLOAD_URL")"
 DEST_FILE="$TEMP_DIR/$FILE_NAME"
 
-echo -e "${CYAN}→${NC} Downloading ${BOLD}$FILE_NAME${NC}..."
+echo -e "\n${CYAN}→${NC} Downloading ${BOLD}$FILE_NAME${NC} (${LATEST_TAG})..."
 curl -# -L -o "$DEST_FILE" "$DOWNLOAD_URL"
 
-# 5. Extract and Install
+# 7. Extract and Install
 echo -e "${CYAN}→${NC} Installing to ${BOLD}${TARGET_DIR}/${APP_NAME}.app${NC}..."
 
 if [[ "$DEST_FILE" == *.dmg ]]; then
@@ -108,16 +201,25 @@ elif [[ "$DEST_FILE" == *.zip ]]; then
     fi
 fi
 
-# 6. Remove Gatekeeper Quarantine (Auto-Unquarantine)
+# 8. Record Installed Tag
+echo "$LATEST_TAG" | $USE_SUDO tee "${TARGET_DIR}/${APP_NAME}.app/Contents/.mobius-installed-tag" >/dev/null 2>&1 || true
+
+# 9. Remove Gatekeeper Quarantine (Auto-Unquarantine)
 echo -e "${CYAN}→${NC} Removing Gatekeeper quarantine attributes..."
 $USE_SUDO xattr -cr "${TARGET_DIR}/${APP_NAME}.app" 2>/dev/null || true
 
-# 7. Ad-hoc Sign if needed
+# 10. Ad-hoc Sign if needed
 if command -v codesign >/dev/null 2>&1; then
     $USE_SUDO codesign --force --deep --sign - "${TARGET_DIR}/${APP_NAME}.app" 2>/dev/null || true
 fi
 
-echo -e "\n${GREEN}${BOLD}🎉 Mobius has been installed successfully!${NC}"
+if [ "$IS_INSTALLED" = true ]; then
+    echo -e "\n${GREEN}${BOLD}[Success] Mobius 已成功同步更新至最新版本 (${LATEST_TAG})！${NC}"
+    echo -e "您的插件、工作区与个人数据均完整保留。"
+else
+    echo -e "\n${GREEN}${BOLD}[Success] Mobius has been installed successfully (${LATEST_TAG})!${NC}"
+fi
+
 echo -e "You can launch it anytime by:"
-echo -e "  • Opening ${BOLD}Mobius${NC} in Spotlight or Launchpad"
-echo -e "  • Running: ${CYAN}open /Applications/Mobius.app${NC}\n"
+echo -e "  - Opening ${BOLD}Mobius${NC} in Spotlight or Launchpad"
+echo -e "  - Running: ${CYAN}open /Applications/Mobius.app${NC}\n"
