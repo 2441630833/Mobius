@@ -52,6 +52,9 @@ if [ -f "$ROOT/static/images/logo.png" ]; then
     cp -f "$ROOT/static/images/logo.png" "$VSCODE_DIR/src/vs/workbench/browser/media/logo.png"
     echo -e "${GREEN}[ OK ]${NC} Synced logo.png"
 fi
+if [ -f "$SCRIPT_DIR/generate-mac-icns.py" ]; then
+    python3 "$SCRIPT_DIR/generate-mac-icns.py" 2>/dev/null || true
+fi
 
 # 3. Build Continue extension
 echo -e "\n${CYAN}=== [2/4] Building Continue extension for macOS ===${NC}"

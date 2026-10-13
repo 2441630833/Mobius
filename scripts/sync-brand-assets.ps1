@@ -430,6 +430,18 @@ $faviconInputs = @(16, 32, 48) | ForEach-Object { Join-Path $tempDir "logo-$_.pn
 $faviconDest = Join-Path $VsCodeDir "resources\server\favicon.ico"
 Save-PngAsIco -PngPaths $faviconInputs -OutputPath $faviconDest
 
+# Generate macOS code.icns from logo
+$pyScript = Join-Path $Root "scripts\generate-mac-icns.py"
+if (Test-Path $pyScript) {
+    Write-Host "Updating macOS code.icns..." -ForegroundColor Cyan
+    $pyExe = if (Get-Command py -ErrorAction SilentlyContinue) { "py" } elseif (Get-Command python3 -ErrorAction SilentlyContinue) { "python3" } else { "python" }
+    try {
+        & $pyExe $pyScript $LogoSrc (Join-Path $VsCodeDir "resources\darwin\code.icns")
+    } catch {
+        Write-Host "[WARN] Could not generate code.icns: $_" -ForegroundColor Yellow
+    }
+}
+
 $originalsDir = Join-Path $Root "scripts\brand-assets\originals\win32"
 if (-not (Test-Path $originalsDir)) {
     New-Item -ItemType Directory -Force -Path $originalsDir | Out-Null

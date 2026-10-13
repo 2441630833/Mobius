@@ -142,6 +142,15 @@ exports.createWatcher = w;
 EOF
 fi
 
+# Ensure Mobius application bundle icon in Contents/Resources
+if [ -f "$VSCODE_DIR/resources/darwin/code.icns" ]; then
+    echo "Ensuring Mobius icon in application bundle Resources..."
+    mkdir -p "$APP_PATH/Contents/Resources"
+    for icon_name in "Code.icns" "Code - OSS.icns" "Mobius.icns" "mobius.icns" "electron.icns"; do
+        cp -f "$VSCODE_DIR/resources/darwin/code.icns" "$APP_PATH/Contents/Resources/$icon_name" 2>/dev/null || true
+    done
+fi
+
 if command -v xattr >/dev/null 2>&1; then
     echo "Clearing extended quarantine attributes..."
     xattr -cr "$APP_PATH" 2>/dev/null || true
