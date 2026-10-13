@@ -20,7 +20,11 @@ if [[ "$1" == "--release" ]] || [[ "$1" == "--app" ]]; then
     shift
     if [ -d "$APP_BUNDLE" ]; then
         echo "Opening Mobius release app bundle: $APP_BUNDLE"
-        open "$APP_BUNDLE" --args "$@"
+        if [ $# -eq 0 ]; then
+            open "$APP_BUNDLE" --args --agents --disable-workspace-trust
+        else
+            open "$APP_BUNDLE" --args "$@"
+        fi
         exit 0
     else
         echo "Release bundle $APP_BUNDLE not found. Launching development mode instead..."
@@ -51,4 +55,8 @@ else
 fi
 
 echo "Launching Mobius macOS dev client..."
-exec "$VSCODE_DIR/scripts/code.sh" "$@"
+if [ $# -eq 0 ]; then
+    exec "$VSCODE_DIR/scripts/code.sh" --agents --disable-workspace-trust
+else
+    exec "$VSCODE_DIR/scripts/code.sh" "$@"
+fi
