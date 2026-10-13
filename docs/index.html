@@ -242,38 +242,6 @@
     .window-dot--min { background: #f4be4f; }
     .window-dot--max { background: #62c554; }
 
-    .quick-install__meta {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 11px;
-      font-weight: 500;
-      color: #8c9d92;
-      font-family: var(--sans);
-      letter-spacing: 0.02em;
-    }
-
-    .quick-install__term-icon {
-      width: 12px;
-      height: 12px;
-      stroke: #72877a;
-    }
-
-    .quick-install__badge {
-      display: inline-flex;
-      align-items: center;
-      font-size: 9.5px;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-      padding: 1px 5px;
-      border-radius: 999px;
-      background: rgba(98, 197, 84, 0.16);
-      color: #7ee785;
-      border: 1px solid rgba(98, 197, 84, 0.3);
-      line-height: 1.3;
-      margin-left: 2px;
-    }
-
     .quick-install__tabs {
       display: flex;
       gap: 3px;
@@ -453,9 +421,6 @@
     }
 
     @media (max-width: 480px) {
-      .quick-install__meta {
-        display: none;
-      }
       .quick-install {
         margin-top: 10px;
       }
@@ -736,6 +701,29 @@
       text-decoration: underline;
     }
 
+    .lang-switch-sep {
+      margin: 0 5px;
+      opacity: 0.45;
+      display: inline-block;
+    }
+
+    .lang-switch-btn {
+      background: none;
+      border: none;
+      font-family: inherit;
+      font-size: 11.5px;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 0;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      transition: color 0.15s ease;
+    }
+
+    .lang-switch-btn:hover {
+      color: var(--ink);
+    }
+
     /* 7. RESPONSIVE BREAKPOINTS */
     @media (max-width: 900px) {
       .footer__nav ul {
@@ -859,26 +847,26 @@
       <p class="footer__brand"><a href="https://github.com/2441630833/Mobius" aria-label="Mobius home">mobius</a></p>
 
       <!-- (c) TAGLINE -->
-      <p class="footer__tagline">The scenic route to shipped work. Plan, track, and deliver from town to town.</p>
+      <p class="footer__tagline" data-i18n="tagline">The scenic route to shipped work. Plan, track, and deliver from town to town.</p>
 
       <!-- MOBIUS DESKTOP DOWNLOAD LINKS -->
-      <div class="footer__downloads" role="group" aria-label="Download Mobius Desktop">
+      <div class="footer__downloads" role="group" aria-label="Download Mobius Desktop" data-i18n-aria="downloadGroupAria">
         <div class="downloads__group">
-          <a href="https://github.com/2441630833/Mobius/releases/download/v1.0.2/MobiusSetup.exe" class="download-btn download-btn--win" title="Download Mobius for Windows (x64 Installer)" target="_blank" rel="noopener noreferrer">
+          <a href="https://github.com/2441630833/Mobius/releases/download/v1.0.2/MobiusSetup.exe" class="download-btn download-btn--win" title="Download Mobius for Windows (x64 Installer)" data-i18n-title="winBtnTitle" target="_blank" rel="noopener noreferrer">
             <svg class="download-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M3.001 5.479l7.377-1.016v7.127H3.001V5.479zm0 13.042l7.377 1.016v-7.039H3.001v6.023zm8.188 1.125L21 21v-8.502h-9.811v7.148zm0-15.292v7.236H21V3l-9.811 1.354z"/>
             </svg>
             <span>Windows</span>
             <span class="download-tag">.exe</span>
           </a>
-          <a href="https://github.com/2441630833/Mobius/releases/download/v1.0.3/Mobius-1.126.0-macOS-arm64.dmg" class="download-btn download-btn--mac" title="Download Mobius for macOS (Apple Silicon DMG)" target="_blank" rel="noopener noreferrer">
+          <a href="https://github.com/2441630833/Mobius/releases/download/v1.0.3/Mobius-1.126.0-macOS-arm64.dmg" class="download-btn download-btn--mac" title="Download Mobius for macOS (Apple Silicon DMG)" data-i18n-title="macBtnTitle" target="_blank" rel="noopener noreferrer">
             <svg class="download-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M11.673 7.222c-.876 0-2.232-.996-3.66-.96-1.884.024-3.612 1.092-4.584 2.784-1.956 3.396-.504 8.412 1.404 11.172.936 1.344 2.04 2.856 3.504 2.808 1.404-.06 1.932-.912 3.636-.912 1.692 0 2.172.912 3.66.876 1.512-.024 2.472-1.368 3.396-2.724 1.068-1.56 1.512-3.072 1.536-3.156-.036-.012-2.94-1.128-2.976-4.488-.024-2.808 2.292-4.152 2.4-4.212-1.32-1.932-3.348-2.148-4.056-2.196-1.848-.144-3.396 1.008-4.26 1.008zm3.12-2.832c.78-.936 1.296-2.244 1.152-3.54-1.116.048-2.46.744-3.264 1.68-.72.828-1.344 2.16-1.176 3.432 1.236.096 2.508-.636 3.288-1.572z"/>
             </svg>
             <span>macOS</span>
             <span class="download-tag">.dmg</span>
           </a>
-          <a href="https://github.com/2441630833/Mobius/releases/download/v1.0.3/mobius_1.126.0_amd64.deb" class="download-btn download-btn--linux" title="Download Mobius for Linux (Debian / Ubuntu .deb)" target="_blank" rel="noopener noreferrer">
+          <a href="https://github.com/2441630833/Mobius/releases/download/v1.0.3/mobius_1.126.0_amd64.deb" class="download-btn download-btn--linux" title="Download Mobius for Linux (Debian / Ubuntu .deb)" data-i18n-title="linuxBtnTitle" target="_blank" rel="noopener noreferrer">
             <svg class="download-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a.424.424 0 00-.11.135c-.26.268-.45.6-.663.839-.199.199-.485.267-.797.4-.313.136-.658.269-.864.68-.09.189-.136.394-.132.602 0 .199.027.4.055.536.058.399.116.728.04.97-.249.68-.28 1.145-.106 1.484.174.334.535.47.94.601.81.2 1.91.135 2.774.6.926.466 1.866.67 2.616.47.526-.116.97-.464 1.208-.946.587-.003 1.23-.269 2.26-.334.699-.058 1.574.267 2.577.2.025.134.063.198.114.333l.003.003c.391.778 1.113 1.132 1.884 1.071.771-.06 1.592-.536 2.257-1.306.631-.765 1.683-1.084 2.378-1.503.348-.199.629-.469.649-.853.023-.4-.2-.811-.714-1.376v-.097l-.003-.003c-.17-.2-.25-.535-.338-.926-.085-.401-.182-.786-.492-1.046h-.003c-.059-.054-.123-.067-.188-.135a.357.357 0 00-.19-.064c.431-1.278.264-2.55-.173-3.694-.533-1.41-1.465-2.638-2.175-3.483-.796-1.005-1.576-1.957-1.56-3.368.026-2.152.236-6.133-3.544-6.139zm.529 3.405h.013c.213 0 .396.062.584.198.19.135.33.332.438.533.105.259.158.459.166.724 0-.02.006-.04.006-.06v.105a.086.086 0 01-.004-.021l-.004-.024a1.807 1.807 0 01-.15.706.953.953 0 01-.213.335.71.71 0 00-.088-.042c-.104-.045-.198-.064-.284-.133a1.312 1.312 0 00-.22-.066c.05-.06.146-.133.183-.198.053-.128.082-.264.088-.402v-.02a1.21 1.21 0 00-.061-.4c-.045-.134-.101-.2-.183-.333-.084-.066-.167-.132-.267-.132h-.016c-.093 0-.176.03-.262.132a.8.8 0 00-.205.334 1.18 1.18 0 00-.09.4v.019c.002.089.008.179.02.267-.193-.067-.438-.135-.607-.202a1.635 1.635 0 01-.018-.2v-.02a1.772 1.772 0 01.15-.768c.082-.22.232-.406.43-.533a.985.985 0 01.594-.2zm-2.962.059h.036c.142 0 .27.048.399.135.146.129.264.288.344.465.09.199.14.4.153.667v.004c.007.134.006.2-.002.266v.08c-.03.007-.056.018-.083.024-.152.055-.274.135-.393.2.012-.09.013-.18.003-.267v-.015c-.012-.133-.04-.2-.082-.333a.613.613 0 00-.166-.267.248.248 0 00-.183-.064h-.021c-.071.006-.13.04-.186.132a.552.552 0 00-.12.27.944.944 0 00-.023.33v.015c.012.135.037.2.08.334.046.134.098.2.166.268.01.009.02.018.034.024-.07.057-.117.07-.176.136a.304.304 0 01-.131.068 2.62 2.62 0 01-.275-.402 1.772 1.772 0 01-.155-.667 1.759 1.759 0 01.08-.668 1.43 1.43 0 01.283-.535c.128-.133.26-.2.418-.2zm1.37 1.706c.332 0 .733.065 1.216.399.293.2.523.269 1.052.468h.003c.255.136.405.266.478.399v-.131a.571.571 0 01.016.47c-.123.31-.516.643-1.063.842v.002c-.268.135-.501.333-.775.465-.276.135-.588.292-1.012.267a1.139 1.139 0 01-.448-.067 3.566 3.566 0 01-.322-.198c-.195-.135-.363-.332-.612-.465v-.005h-.005c-.4-.246-.616-.512-.686-.71-.07-.268-.005-.47.193-.6.224-.135.38-.271.483-.336.104-.074.143-.102.176-.131h.002v-.003c.169-.202.436-.47.839-.601.139-.036.294-.065.466-.065z"/>
             </svg>
@@ -889,35 +877,27 @@
       </div>
 
       <!-- QUICK ONE-LINE INSTALLER WIDGET -->
-      <div class="quick-install" role="region" aria-label="Terminal One-Line Fast Installer and Updater">
+      <div class="quick-install" role="region" aria-label="Terminal One-Line Fast Installer and Updater" data-i18n-aria="quickInstallAria">
         <div class="quick-install__topbar">
           <div class="quick-install__window-controls" aria-hidden="true">
             <span class="window-dot window-dot--close"></span>
             <span class="window-dot window-dot--min"></span>
             <span class="window-dot window-dot--max"></span>
           </div>
-          <div class="quick-install__meta">
-            <svg class="quick-install__term-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="4 17 10 11 4 5"></polyline>
-              <line x1="12" y1="19" x2="20" y2="19"></line>
-            </svg>
-            <span>一键安装 / 同步更新</span>
-            <span class="quick-install__badge" title="支持首次极速安装与本地已安装版本的就地无损同步更新">全新 · 同步更新</span>
-          </div>
           <div class="quick-install__tabs" role="tablist">
-            <button type="button" class="quick-tab-btn active" data-os="mac" role="tab" aria-selected="true" title="macOS 一键安装与同步更新命令">
+            <button type="button" class="quick-tab-btn active" data-os="mac" role="tab" aria-selected="true" title="macOS Fast Install & Update Command" data-i18n-title="tabMacTitle">
               <svg class="os-icon os-icon--mac" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M11.673 7.222c-.876 0-2.232-.996-3.66-.96-1.884.024-3.612 1.092-4.584 2.784-1.956 3.396-.504 8.412 1.404 11.172.936 1.344 2.04 2.856 3.504 2.808 1.404-.06 1.932-.912 3.636-.912 1.692 0 2.172.912 3.66.876 1.512-.024 2.472-1.368 3.396-2.724 1.068-1.56 1.512-3.072 1.536-3.156-.036-.012-2.94-1.128-2.976-4.488-.024-2.808 2.292-4.152 2.4-4.212-1.32-1.932-3.348-2.148-4.056-2.196-1.848-.144-3.396 1.008-4.26 1.008zm3.12-2.832c.78-.936 1.296-2.244 1.152-3.54-1.116.048-2.46.744-3.264 1.68-.72.828-1.344 2.16-1.176 3.432 1.236.096 2.508-.636 3.288-1.572z"/>
               </svg>
               <span>macOS</span>
             </button>
-            <button type="button" class="quick-tab-btn" data-os="win" role="tab" aria-selected="false" title="Windows 一键安装与同步更新命令">
+            <button type="button" class="quick-tab-btn" data-os="win" role="tab" aria-selected="false" title="Windows Fast Install & Update Command" data-i18n-title="tabWinTitle">
               <svg class="os-icon os-icon--win" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M3.001 5.479l7.377-1.016v7.127H3.001V5.479zm0 13.042l7.377 1.016v-7.039H3.001v6.023zm8.188 1.125L21 21v-8.502h-9.811v7.148zm0-15.292v7.236H21V3l-9.811 1.354z"/>
               </svg>
               <span>Windows</span>
             </button>
-            <button type="button" class="quick-tab-btn" data-os="linux" role="tab" aria-selected="false" title="Linux 一键安装与同步更新命令">
+            <button type="button" class="quick-tab-btn" data-os="linux" role="tab" aria-selected="false" title="Linux Fast Install & Update Command" data-i18n-title="tabLinuxTitle">
               <svg class="os-icon os-icon--linux" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a.424.424 0 00-.11.135c-.26.268-.45.6-.663.839-.199.199-.485.267-.797.4-.313.136-.658.269-.864.68-.09.189-.136.394-.132.602 0 .199.027.4.055.536.058.399.116.728.04.97-.249.68-.28 1.145-.106 1.484.174.334.535.47.94.601.81.2 1.91.135 2.774.6.926.466 1.866.67 2.616.47.526-.116.97-.464 1.208-.946.587-.003 1.23-.269 2.26-.334.699-.058 1.574.267 2.577.2.025.134.063.198.114.333l.003.003c.391.778 1.113 1.132 1.884 1.071.771-.06 1.592-.536 2.257-1.306.631-.765 1.683-1.084 2.378-1.503.348-.199.629-.469.649-.853.023-.4-.2-.811-.714-1.376v-.097l-.003-.003c-.17-.2-.25-.535-.338-.926-.085-.401-.182-.786-.492-1.046h-.003c-.059-.054-.123-.067-.188-.135a.357.357 0 00-.19-.064c.431-1.278.264-2.55-.173-3.694-.533-1.41-1.465-2.638-2.175-3.483-.796-1.005-1.576-1.957-1.56-3.368.026-2.152.236-6.133-3.544-6.139zm.529 3.405h.013c.213 0 .396.062.584.198.19.135.33.332.438.533.105.259.158.459.166.724 0-.02.006-.04.006-.06v.105a.086.086 0 01-.004-.021l-.004-.024a1.807 1.807 0 01-.15.706.953.953 0 01-.213.335.71.71 0 00-.088-.042c-.104-.045-.198-.064-.284-.133a1.312 1.312 0 00-.22-.066c.05-.06.146-.133.183-.198.053-.128.082-.264.088-.402v-.02a1.21 1.21 0 00-.061-.4c-.045-.134-.101-.2-.183-.333-.084-.066-.167-.132-.267-.132h-.016c-.093 0-.176.03-.262.132a.8.8 0 00-.205.334 1.18 1.18 0 00-.09.4v.019c.002.089.008.179.02.267-.193-.067-.438-.135-.607-.202a1.635 1.635 0 01-.018-.2v-.02a1.772 1.772 0 01.15-.768c.082-.22.232-.406.43-.533a.985.985 0 01.594-.2zm-2.962.059h.036c.142 0 .27.048.399.135.146.129.264.288.344.465.09.199.14.4.153.667v.004c.007.134.006.2-.002.266v.08c-.03.007-.056.018-.083.024-.152.055-.274.135-.393.2.012-.09.013-.18.003-.267v-.015c-.012-.133-.04-.2-.082-.333a.613.613 0 00-.166-.267.248.248 0 00-.183-.064h-.021c-.071.006-.13.04-.186.132a.552.552 0 00-.12.27.944.944 0 00-.023.33v.015c.012.135.037.2.08.334.046.134.098.2.166.268.01.009.02.018.034.024-.07.057-.117.07-.176.136a.304.304 0 01-.131.068 2.62 2.62 0 01-.275-.402 1.772 1.772 0 01-.155-.667 1.759 1.759 0 01.08-.668 1.43 1.43 0 01.283-.535c.128-.133.26-.2.418-.2zm1.37 1.706c.332 0 .733.065 1.216.399.293.2.523.269 1.052.468h.003c.255.136.405.266.478.399v-.131a.571.571 0 01.016.47c-.123.31-.516.643-1.063.842v.002c-.268.135-.501.333-.775.465-.276.135-.588.292-1.012.267a1.139 1.139 0 01-.448-.067 3.566 3.566 0 01-.322-.198c-.195-.135-.363-.332-.612-.465v-.005h-.005c-.4-.246-.616-.512-.686-.71-.07-.268-.005-.47.193-.6.224-.135.38-.271.483-.336.104-.074.143-.102.176-.131h.002v-.003c.169-.202.436-.47.839-.601.139-.036.294-.065.466-.065z"/>
               </svg>
@@ -929,12 +909,12 @@
           <div class="quick-install__code-row">
             <span class="quick-install__prompt" id="installPrompt" aria-hidden="true">$</span>
             <code id="installCmd">curl -fsSL https://raw.githubusercontent.com/2441630833/Mobius/main/scripts/install-mac.sh | bash</code>
-            <button type="button" class="quick-install__copy" id="copyInstallBtn" aria-label="复制一键安装与同步更新命令" title="复制">
+            <button type="button" class="quick-install__copy" id="copyInstallBtn" aria-label="Copy install & update command" data-i18n-aria="copyBtnLabel" title="Copy" data-i18n-title="copyBtnText">
               <svg class="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
               </svg>
-              <span class="copy-btn-text">复制</span>
+              <span class="copy-btn-text" data-i18n="copyText">Copy</span>
             </button>
           </div>
         </div>
@@ -945,34 +925,38 @@
               <polyline points="1 20 1 14 7 14"></polyline>
               <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
             </svg>
-            <span>支持首次极速安装 · 本地已安装则自动同步更新至最新版</span>
+            <span data-i18n="quickNote">Fresh install or automatic in-place sync-update for existing installs</span>
           </div>
           <button type="button" class="mac-guide-trigger" id="openMacGuide">
             <svg class="trigger-shield-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             </svg>
-            <span>macOS 提示“无法验证恶意软件”？3 秒放行指南</span>
+            <span data-i18n="macGuideTrigger">macOS says "cannot be opened"? 3-second quick unblock guide</span>
             <span class="trigger-arrow" aria-hidden="true">→</span>
           </button>
         </div>
       </div>
 
       <!-- (d) NAV (8 EXACT ITEMS) -->
-      <nav class="footer__nav" aria-label="Footer">
+      <nav class="footer__nav" aria-label="Footer" data-i18n-aria="navFooterAria">
         <ul>
-          <li><a href="https://github.com/2441630833/Mobius/releases">Platform</a></li>
-          <li><a href="https://github.com/2441630833/Mobius/actions">Workflows</a></li>
-          <li><a href="https://github.com/2441630833/Mobius#integrations">Integrations</a></li>
-          <li><a href="https://github.com/2441630833/Mobius#for-teams">For Teams</a></li>
-          <li><a href="https://github.com/2441630833/Mobius#for-studios">For Studios</a></li>
-          <li><a href="https://github.com/2441630833/Mobius#readme">About</a></li>
-          <li><a href="https://github.com/2441630833/Mobius/commits/main">Journal</a></li>
-          <li><a href="https://github.com/2441630833/Mobius/issues">Contact</a></li>
+          <li><a href="https://github.com/2441630833/Mobius/releases" data-i18n="navPlatform">Platform</a></li>
+          <li><a href="https://github.com/2441630833/Mobius/actions" data-i18n="navWorkflows">Workflows</a></li>
+          <li><a href="https://github.com/2441630833/Mobius#integrations" data-i18n="navIntegrations">Integrations</a></li>
+          <li><a href="https://github.com/2441630833/Mobius#for-teams" data-i18n="navForTeams">For Teams</a></li>
+          <li><a href="https://github.com/2441630833/Mobius#for-studios" data-i18n="navForStudios">For Studios</a></li>
+          <li><a href="https://github.com/2441630833/Mobius#readme" data-i18n="navAbout">About</a></li>
+          <li><a href="https://github.com/2441630833/Mobius/commits/main" data-i18n="navJournal">Journal</a></li>
+          <li><a href="https://github.com/2441630833/Mobius/issues" data-i18n="navContact">Contact</a></li>
         </ul>
       </nav>
 
       <!-- (e) COPYRIGHT -->
-      <p class="footer__copy">© <span id="year">2026</span> <a href="https://github.com/2441630833/Mobius">Mobius Works Ltd.</a></p>
+      <p class="footer__copy">
+        © <span id="year">2026</span> <a href="https://github.com/2441630833/Mobius">Mobius Works Ltd.</a>
+        <span class="lang-switch-sep" aria-hidden="true">·</span>
+        <button type="button" class="lang-switch-btn" id="langSwitchBtn" aria-label="Switch Language">English</button>
+      </p>
     </div>
   </footer>
 
@@ -984,11 +968,11 @@
           <svg class="mac-modal-icon" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M11.673 7.222c-.876 0-2.232-.996-3.66-.96-1.884.024-3.612 1.092-4.584 2.784-1.956 3.396-.504 8.412 1.404 11.172.936 1.344 2.04 2.856 3.504 2.808 1.404-.06 1.932-.912 3.636-.912 1.692 0 2.172.912 3.66.876 1.512-.024 2.472-1.368 3.396-2.724 1.068-1.56 1.512-3.072 1.536-3.156-.036-.012-2.94-1.128-2.976-4.488-.024-2.808 2.292-4.152 2.4-4.212-1.32-1.932-3.348-2.148-4.056-2.196-1.848-.144-3.396 1.008-4.26 1.008zm3.12-2.832c.78-.936 1.296-2.244 1.152-3.54-1.116.048-2.46.744-3.264 1.68-.72.828-1.344 2.16-1.176 3.432 1.236.096 2.508-.636 3.288-1.572z"/>
           </svg>
-          <h3 id="macGuideTitle">macOS 首次打开放行指南</h3>
+          <h3 id="macGuideTitle" data-i18n="modalTitle">macOS 首次打开放行指南</h3>
         </div>
-        <button type="button" class="modal-close-btn" id="closeMacGuide" aria-label="关闭">&times;</button>
+        <button type="button" class="modal-close-btn" id="closeMacGuide" aria-label="关闭" data-i18n-aria="modalCloseAria">&times;</button>
       </div>
-      <p class="mac-guide-intro">
+      <p class="mac-guide-intro" data-i18n-html="modalIntro">
         由于 Mobius 为免费开源软件，尚未向 Apple 购买高额年费公证证书。从浏览器下载后首次打开若提示 <em>“无法验证是否包含恶意软件”</em> 属于 macOS Gatekeeper 正常拦截，只需运行一行命令即可彻底解除：
       </p>
 
@@ -997,40 +981,185 @@
           <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
-          <span>一步解除 · 永久生效</span>
+          <span data-i18n="modalMethodBadge">一步解除 · 永久生效</span>
         </div>
-        <p class="guide-method-step">将 Mobius 拖入「应用程序」后，打开 Mac「终端 (Terminal)」并运行：</p>
+        <p class="guide-method-step" data-i18n-html="modalStep">将 Mobius 拖入「应用程序」后，打开 Mac「终端 (Terminal)」并运行：</p>
         <div class="code-box">
           <code>sudo xattr -cr /Applications/Mobius.app</code>
-          <button type="button" class="copy-inline-btn" data-copy="sudo xattr -cr /Applications/Mobius.app" title="复制放行命令">
-            <svg class="copy-inline-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <button type="button" class="copy-inline-btn" data-copy="sudo xattr -cr /Applications/Mobius.app" title="复制放行命令" data-i18n-title="modalCopyTitle">
+            <svg class="copy-inline-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
               <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
             </svg>
-            <span class="copy-inline-text">复制</span>
+            <span class="copy-inline-text" data-i18n="modalCopyText">复制</span>
           </button>
         </div>
         <div class="guide-hint-box">
           <span class="guide-hint-icon">💡</span>
-          <span>输入 Mac 锁屏开机密码后回车即可（输入密码时屏幕不会显示字符，直接输完回车）。之后双击 Mobius 图标直接秒开，永久不再拦截！</span>
+          <span data-i18n="modalHint">输入 Mac 锁屏开机密码后回车即可（输入密码时屏幕不会显示字符，直接输完回车）。之后双击 Mobius 图标直接秒开，永久不再拦截！</span>
         </div>
       </div>
 
       <div class="mac-guide-footer">
-        <button type="button" class="guide-done-btn" id="doneMacGuide">我知道了</button>
+        <button type="button" class="guide-done-btn" id="doneMacGuide" data-i18n="modalDone">我知道了</button>
       </div>
     </div>
   </dialog>
 
   <!-- 8. JAVASCRIPT -->
   <script>
-    // 1. Set #year textContent to new Date().getFullYear()
+    // 1. Internationalization (i18n) Dictionary & Engine
+    const I18N = {
+      en: {
+        docTitle: "Mobius — The Scenic Route to Shipped Work",
+        docDescription: "The scenic route to shipped work. Plan, track, and deliver from town to town. Download Mobius desktop for Windows, macOS, and Linux.",
+        tagline: "The scenic route to shipped work. Plan, track, and deliver from town to town.",
+        downloadGroupAria: "Download Mobius Desktop",
+        winBtnTitle: "Download Mobius for Windows (x64 Installer)",
+        macBtnTitle: "Download Mobius for macOS (Apple Silicon DMG)",
+        linuxBtnTitle: "Download Mobius for Linux (Debian / Ubuntu .deb)",
+        quickInstallAria: "Terminal One-Line Fast Installer and Updater",
+        tabMacTitle: "macOS Fast Install & Update Command",
+        tabWinTitle: "Windows Fast Install & Update Command",
+        tabLinuxTitle: "Linux Fast Install & Update Command",
+        copyBtnLabel: "Copy install & update command",
+        copyBtnText: "Copy",
+        copyText: "Copy",
+        copiedText: "Copied",
+        quickNote: "Fresh install or automatic in-place sync-update for existing installs",
+        macGuideTrigger: 'macOS says "cannot be opened"? 3-second quick unblock guide',
+        navFooterAria: "Footer",
+        navPlatform: "Platform",
+        navWorkflows: "Workflows",
+        navIntegrations: "Integrations",
+        navForTeams: "For Teams",
+        navForStudios: "For Studios",
+        navAbout: "About",
+        navJournal: "Journal",
+        navContact: "Contact",
+        modalTitle: "macOS First-Launch Unblock Guide",
+        modalCloseAria: "Close",
+        modalIntro: "Because Mobius is free and open-source software without an expensive annual Apple notary certificate, macOS Gatekeeper may show <em>“cannot be opened because the developer cannot be verified”</em> on first launch. Run this single command to permanently unblock it:",
+        modalMethodBadge: "One Step · Permanently Effective",
+        modalStep: "Drag Mobius into Applications, then open Terminal and run:",
+        modalCopyTitle: "Copy unblock command",
+        modalCopyText: "Copy",
+        modalHint: "Enter your Mac lock-screen password and press Enter (characters will not show while typing). Mobius will open immediately without Gatekeeper prompts!",
+        modalDone: "Got It"
+      },
+      zh: {
+        docTitle: "Mobius — 探索交付的风景之路",
+        docDescription: "探索交付的风景之路。在一座座城镇之间规划、追踪与交付。下载适用于 Windows、macOS 与 Linux 的 Mobius 桌面端。",
+        tagline: "探索交付的风景之路。在一座座城镇之间规划、追踪与交付。",
+        downloadGroupAria: "下载 Mobius 桌面端",
+        winBtnTitle: "下载 Mobius Windows 版 (x64 安装包)",
+        macBtnTitle: "下载 Mobius macOS 版 (Apple Silicon DMG)",
+        linuxBtnTitle: "下载 Mobius Linux 版 (Debian / Ubuntu .deb)",
+        quickInstallAria: "终端一键极速安装与同步更新",
+        tabMacTitle: "macOS 极速安装与同步更新命令",
+        tabWinTitle: "Windows 极速安装与同步更新命令",
+        tabLinuxTitle: "Linux 极速安装与同步更新命令",
+        copyBtnLabel: "复制安装与同步更新命令",
+        copyBtnText: "复制",
+        copyText: "复制",
+        copiedText: "已复制",
+        quickNote: "全新安装或本地已安装版本原位一键同步更新",
+        macGuideTrigger: "macOS 提示“无法打开”？3 秒极速放行指南",
+        navFooterAria: "页脚导航",
+        navPlatform: "平台",
+        navWorkflows: "工作流",
+        navIntegrations: "生态集成",
+        navForTeams: "团队版",
+        navForStudios: "工作室版",
+        navAbout: "关于",
+        navJournal: "日志",
+        navContact: "联系我们",
+        modalTitle: "macOS 首次打开放行指南",
+        modalCloseAria: "关闭",
+        modalIntro: "由于 Mobius 为免费开源软件，尚未向 Apple 购买高额年费公证证书。从浏览器下载后首次打开若提示 <em>“无法验证是否包含恶意软件”</em> 属于 macOS Gatekeeper 正常拦截，只需运行一行命令即可彻底解除：",
+        modalMethodBadge: "一步解除 · 永久生效",
+        modalStep: "将 Mobius 拖入「应用程序」后，打开 Mac「终端 (Terminal)」并运行：",
+        modalCopyTitle: "复制放行命令",
+        modalCopyText: "复制",
+        modalHint: "输入 Mac 锁屏开机密码后回车即可（输入密码时屏幕不会显示字符，直接输完回车）。之后双击 Mobius 图标直接秒开，永久不再拦截！",
+        modalDone: "我知道了"
+      }
+    };
+
+    let currentLang = (function () {
+      try {
+        const saved = localStorage.getItem("mobius_lang");
+        if (saved === "en" || saved === "zh") return saved;
+      } catch (e) {}
+      const navLang = (navigator.language || navigator.userLanguage || "en").toLowerCase();
+      return navLang.startsWith("zh") ? "zh" : "en";
+    })();
+
+    function applyLanguage(lang) {
+      if (!I18N[lang]) lang = "en";
+      currentLang = lang;
+      document.documentElement.lang = lang;
+      const t = I18N[lang];
+
+      if (t.docTitle) document.title = t.docTitle;
+      const metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc && t.docDescription) metaDesc.setAttribute("content", t.docDescription);
+
+      document.querySelectorAll("[data-i18n]").forEach(function (el) {
+        const key = el.getAttribute("data-i18n");
+        if (t[key] !== undefined) {
+          el.textContent = t[key];
+        }
+      });
+
+      document.querySelectorAll("[data-i18n-html]").forEach(function (el) {
+        const key = el.getAttribute("data-i18n-html");
+        if (t[key] !== undefined) {
+          el.innerHTML = t[key];
+        }
+      });
+
+      document.querySelectorAll("[data-i18n-title]").forEach(function (el) {
+        const key = el.getAttribute("data-i18n-title");
+        if (t[key] !== undefined) {
+          el.setAttribute("title", t[key]);
+        }
+      });
+
+      document.querySelectorAll("[data-i18n-aria]").forEach(function (el) {
+        const key = el.getAttribute("data-i18n-aria");
+        if (t[key] !== undefined) {
+          el.setAttribute("aria-label", t[key]);
+        }
+      });
+
+      const langBtn = document.getElementById("langSwitchBtn");
+      if (langBtn) {
+        langBtn.textContent = (lang === "zh") ? "English" : "中文";
+        langBtn.setAttribute("aria-label", (lang === "zh") ? "Switch language to English" : "切换为中文");
+      }
+    }
+
+    applyLanguage(currentLang);
+
+    const langBtn = document.getElementById("langSwitchBtn");
+    if (langBtn) {
+      langBtn.addEventListener("click", function () {
+        const nextLang = (currentLang === "zh") ? "en" : "zh";
+        try {
+          localStorage.setItem("mobius_lang", nextLang);
+        } catch (e) {}
+        applyLanguage(nextLang);
+      });
+    }
+
+    // 2. Set #year textContent to new Date().getFullYear()
     const yearEl = document.getElementById("year");
     if (yearEl) {
       yearEl.textContent = new Date().getFullYear();
     }
 
-    // 2. IIFE for the video
+    // 3. IIFE for the video
     (function () {
       const video = document.querySelector(".footer__video");
       if (!video) return;
@@ -1058,7 +1187,7 @@
       }
     })();
 
-    // 3. Dynamic Auto-Update for Mobius Desktop Downloads
+    // 4. Dynamic Auto-Update for Mobius Desktop Downloads
     (function () {
       const repo = "2441630833/Mobius";
       const apiUrl = "https://api.github.com/repos/" + repo + "/releases";
@@ -1104,19 +1233,19 @@
           const winBtn = document.querySelector(".download-btn--win");
           if (winBtn && winAsset) {
             winBtn.href = winAsset.url;
-            winBtn.title = "Download Mobius for Windows (" + (winAsset.tag ? winAsset.tag + " · " : "") + winAsset.name + ")";
+            winBtn.title = (currentLang === "zh" ? "下载 Mobius Windows 版" : "Download Mobius for Windows") + " (" + (winAsset.tag ? winAsset.tag + " · " : "") + winAsset.name + ")";
           }
 
           const macBtn = document.querySelector(".download-btn--mac");
           if (macBtn && macAsset) {
             macBtn.href = macAsset.url;
-            macBtn.title = "Download Mobius for macOS (" + (macAsset.tag ? macAsset.tag + " · " : "") + macAsset.name + ")";
+            macBtn.title = (currentLang === "zh" ? "下载 Mobius macOS 版" : "Download Mobius for macOS") + " (" + (macAsset.tag ? macAsset.tag + " · " : "") + macAsset.name + ")";
           }
 
           const linuxBtn = document.querySelector(".download-btn--linux");
           if (linuxBtn && linuxAsset) {
             linuxBtn.href = linuxAsset.url;
-            linuxBtn.title = "Download Mobius for Linux (" + (linuxAsset.tag ? linuxAsset.tag + " · " : "") + linuxAsset.name + ")";
+            linuxBtn.title = (currentLang === "zh" ? "下载 Mobius Linux 版" : "Download Mobius for Linux") + " (" + (linuxAsset.tag ? linuxAsset.tag + " · " : "") + linuxAsset.name + ")";
           }
         })
         .catch(function () {
@@ -1124,7 +1253,7 @@
         });
     })();
 
-    // 4. One-Line Fast Installer Tab Switcher & Copy Handlers
+    // 5. One-Line Fast Installer Tab Switcher & Copy Handlers
     (function () {
       const commands = {
         mac: "curl -fsSL https://raw.githubusercontent.com/2441630833/Mobius/main/scripts/install-mac.sh | bash",
@@ -1199,7 +1328,8 @@
         if (!btn) return;
         const originalHtml = btn.innerHTML;
         btn.classList.add("copied");
-        btn.innerHTML = checkSvg + "<span>已复制</span>";
+        const copiedLabel = (I18N[currentLang] && I18N[currentLang].copiedText) ? I18N[currentLang].copiedText : "Copied";
+        btn.innerHTML = checkSvg + "<span>" + copiedLabel + "</span>";
         setTimeout(function () {
           btn.classList.remove("copied");
           btn.innerHTML = originalHtml;
@@ -1219,7 +1349,7 @@
         });
       });
 
-      // 5. macOS Guide Modal
+      // 6. macOS Guide Modal
       const modal = document.getElementById("macGuideModal");
       const openBtn = document.getElementById("openMacGuide");
       const closeBtn = document.getElementById("closeMacGuide");
