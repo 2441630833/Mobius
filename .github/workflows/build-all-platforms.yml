@@ -186,7 +186,6 @@ jobs:
         shell: pwsh
         run: |
           $env:SKIP_OLLAMA_BUNDLE = '1'
-          $env:PACKAGE_INCREMENTAL = '1'
           powershell -ExecutionPolicy Bypass -Command "& './scripts/package.ps1' -Arch x64 -Target user"
 
           New-Item -ItemType Directory -Force -Path dist | Out-Null
@@ -223,6 +222,8 @@ jobs:
     needs: [build-macos, build-linux, build-windows]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Download all build artifacts

@@ -19,6 +19,8 @@ jobs:
   build-ubuntu:
     runs-on: ubuntu-22.04
     timeout-minutes: 90
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout Mobius repository
