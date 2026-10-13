@@ -1,163 +1,500 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mobius</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mobius — The Scenic Route to Shipped Work</title>
+  <meta name="description" content="The scenic route to shipped work. Plan, track, and deliver from town to town. Download Mobius desktop for Windows, macOS, and Linux.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #ebeee7;     /* pale sage page background */
+      --ink: #2b3a30;       /* engraving dark green — logo, wordmark, nav, dots */
+      --ink-soft: #3d4a41;  /* tagline */
+      --muted: #6b746c;     /* copyright */
+      --serif: "Fraunces", Georgia, "Times New Roman", serif;
+      --sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+    }
+
+    /* 4. FOOTER CONTAINER */
+    .footer {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      height: 100svh;
+      /* NO min-height (so it never causes scroll) */
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--paper);
+      isolation: isolate;
+    }
+
+    /* 5. BACKGROUND VIDEO */
+    .footer__video {
+      order: 2;
+      flex: 1 1 0;
+      min-height: 0;
+      display: block;
+      width: 100%;
+      height: auto;
+      margin-top: -12vh;
+      margin-top: -12svh;
+      object-fit: cover;
+      object-position: 50% 35%;
+      mix-blend-mode: multiply;
+      position: relative;
+      z-index: 0;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    /* 6. CONTENT BLOCK */
+    .footer__content {
+      order: 1;
+      flex: none;
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: clamp(28px, 2.8vw, 36px) 16px 0;
+    }
+
+    /* (a) COMPASS LOGO */
+    .footer__mark {
+      width: clamp(44px, 4.1vw, 54px);
+      height: auto;
+      color: var(--ink);
+      display: block;
+      transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .footer__mark:hover {
+      transform: rotate(20deg);
+    }
+
+    /* (b) WORDMARK */
+    .footer__brand {
+      margin: clamp(6px, .9vw, 12px) 0 0;
+      font-family: var(--serif);
+      font-weight: 600;
+      font-variation-settings: "opsz" 72;
+      font-size: clamp(40px, 3.6vw, 48px);
+      line-height: 1;
+      letter-spacing: -0.015em;
+      color: var(--ink);
+    }
+
+    .footer__brand a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    /* (c) TAGLINE */
+    .footer__tagline {
+      margin: clamp(14px, 1.4vw, 18px) 0 0;
+      font-size: clamp(14px, 1.1vw, 15px);
+      line-height: 1.5;
+      color: var(--ink-soft);
+      max-width: 44em;
+    }
+
+    /* MOBIUS DESKTOP DOWNLOADS */
+    .footer__downloads {
+      margin-top: clamp(14px, 1.4vw, 18px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .downloads__group {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 13px;
+      background: rgba(43, 58, 48, 0.035);
+      border: 1px solid var(--ink);
+      border-radius: 999px;
+      color: var(--ink);
+      text-decoration: none;
+      font-family: var(--sans);
+      font-size: clamp(12.5px, 0.95vw, 13.5px);
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      transition: background-color 0.25s ease, color 0.25s ease, transform 0.15s ease, border-color 0.25s ease;
+    }
+
+    .download-btn:hover {
+      background: var(--ink);
+      color: var(--paper);
+      transform: translateY(-1px);
+    }
+
+    .download-btn:focus-visible {
+      outline: 2px solid var(--ink);
+      outline-offset: 3px;
+    }
+
+    .download-btn .download-icon {
+      width: 13px;
+      height: 13px;
+      flex-shrink: 0;
+      fill: currentColor;
+    }
+
+    .download-btn .download-tag {
+      font-size: 10.5px;
+      padding: 1px 5px;
+      border-radius: 999px;
+      background: rgba(43, 58, 48, 0.1);
+      color: inherit;
+      font-weight: 500;
+      transition: background-color 0.25s ease;
+    }
+
+    .download-btn:hover .download-tag {
+      background: rgba(235, 238, 231, 0.25);
+      color: var(--paper);
+    }
+
+    /* (d) NAV */
+    .footer__nav {
+      margin-top: clamp(20px, 2.4vw, 32px);
+    }
+
+    .footer__nav ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      row-gap: 10px;
+    }
+
+    .footer__nav li {
+      display: flex;
+      align-items: center;
+    }
+
+    .footer__nav li + li::before {
+      content: "";
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--ink);
+      margin: 0 clamp(16px, 1.8vw, 24px);
+      flex: none;
+    }
+
+    .footer__nav a {
+      position: relative;
+      color: var(--ink);
+      text-decoration: none;
+      font-size: clamp(14px, 1.1vw, 15px);
+      font-weight: 400;
+      padding: 4px 0;
+      transition: color .2s ease;
+    }
+
+    /* HOVER ANIMATION: a::after is a 1px underline */
+    .footer__nav a::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 1px;
+      background: currentColor;
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform .3s ease;
+    }
+
+    .footer__nav a:hover::after,
+    .footer__nav a:focus-visible::after {
+      transform: scaleX(1);
+    }
+
+    .footer__nav a:focus-visible {
+      outline: 2px solid var(--ink);
+      outline-offset: 4px;
+      border-radius: 2px;
+    }
+
+    /* (e) COPYRIGHT */
+    .footer__copy {
+      margin: clamp(16px, 1.8vw, 24px) 0 0;
+      font-size: 11.5px;
+      color: var(--muted);
+      letter-spacing: .01em;
+    }
+
+    .footer__copy a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .footer__copy a:hover {
+      text-decoration: underline;
+    }
+
+    /* 7. RESPONSIVE BREAKPOINTS */
+    @media (max-width: 900px) {
+      .footer__nav ul {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        column-gap: 16px;
+        row-gap: 4px;
+        max-width: 560px;
+        margin: 0 auto;
+      }
+      .footer__nav li {
+        justify-content: center;
+      }
+      .footer__nav li + li::before {
+        display: none;
+      }
+      .footer__nav a {
+        padding: 8px 4px;
+        font-size: 15px;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .footer__content {
+        padding: 24px 16px 0;
+      }
+      .footer__mark {
+        width: 42px;
+      }
+      .footer__brand {
+        font-size: 36px;
+      }
+      .footer__tagline {
+        font-size: 13.5px;
+        margin-top: 10px;
+      }
+      .footer__downloads {
+        margin-top: 12px;
+      }
+      .downloads__group {
+        gap: 6px;
+      }
+      .download-btn {
+        padding: 5px 10px;
+        font-size: 12px;
+      }
+      .footer__nav {
+        margin-top: 14px;
+      }
+      .footer__nav ul {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        max-width: 320px;
+        row-gap: 2px;
+      }
+      .footer__nav a {
+        padding: 6px 4px;
+        font-size: 14px;
+      }
+      .footer__copy {
+        margin-top: 12px;
+        font-size: 11px;
+      }
+    }
+
+    @media (max-height: 720px) {
+      .footer__content {
+        padding: 18px 16px 0;
+      }
+      .footer__mark {
+        width: 38px;
+      }
+      .footer__brand {
+        margin-top: 4px;
+        font-size: 34px;
+      }
+      .footer__tagline {
+        margin-top: 8px;
+        font-size: 13px;
+      }
+      .footer__downloads {
+        margin-top: 10px;
+      }
+      .footer__nav {
+        margin-top: 10px;
+      }
+      .footer__copy {
+        margin-top: 10px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .footer__nav a::after {
+        transition: none;
+      }
+      .download-btn {
+        transition: none;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div class="bg-grid" aria-hidden="true"></div>
-  <div class="bg-glow bg-glow-a" aria-hidden="true"></div>
-  <div class="bg-glow bg-glow-b" aria-hidden="true"></div>
 
-  <header class="header">
-    <div class="logo">
-      <img src="/static/images/logo.png" alt="" class="logo-img" width="36" height="36" />
-      <span class="logo-text">Mobius</span>
-    </div>
-    <nav class="nav">
-      <a href="#features">Features</a>
-      <a href="#playground">Playground</a>
-      <a href="#start">Quick Start</a>
-    </nav>
-    <button type="button" class="btn btn-primary btn-sm" id="btn-open-playground">Try demo</button>
-  </header>
+  <!-- 4. FOOTER CONTAINER -->
+  <footer class="footer">
+    <!-- 5. BACKGROUND VIDEO (FIRST IN DOM, ORDER: 2 IN CSS) -->
+    <video class="footer__video" autoplay muted loop playsinline preload="auto" aria-hidden="true" tabindex="-1" disablepictureinpicture>
+      <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260928_144832_2b6b23aa-4416-4fcb-9df4-132349c59edc.mp4" type="video/mp4">
+    </video>
 
-  <main>
-    <section class="hero">
-      <div class="hero-badge">VS Code OSS + Continue Agent</div>
-      <h1>Build with an AI that <span class="gradient-text">acts</span>, not asks</h1>
-      <p class="hero-lead">
-        A Cursor-like IDE fork: autonomous agent mode, inline edits, and a codebase-aware assistant —
-        all in your own branded editor.
-      </p>
-      <div class="hero-actions">
-        <button type="button" class="btn btn-primary" id="btn-launch-info">Launch IDE</button>
-        <a class="btn btn-ghost" href="#start">Setup guide</a>
-      </div>
-      <div class="hero-stats">
-        <div class="stat"><strong>Agent</strong><span>Tool use enabled</span></div>
-        <div class="stat"><strong>Continue</strong><span>Chat + edit + apply</span></div>
-        <div class="stat"><strong>Local</strong><span>Your API keys</span></div>
-      </div>
-    </section>
+    <!-- 6. CONTENT BLOCK (SECOND IN DOM, ORDER: 1 IN CSS) -->
+    <div class="footer__content">
+      <!-- (a) COMPASS LOGO -->
+      <svg class="footer__mark" viewBox="0 0 64 64" role="img" aria-label="Mobius compass">
+        <circle cx="32" cy="32" r="30" fill="none" stroke="currentColor" stroke-width="2.2" />
+        <circle cx="32" cy="32" r="25.5" fill="none" stroke="currentColor" stroke-width=".8" opacity=".5" />
+        <g fill="currentColor" opacity=".85">
+          <path d="M32 32 L46 18 L35.2 34.4 Z" />
+          <path d="M32 32 L46 46 L29.6 35.2 Z" />
+          <path d="M32 32 L18 46 L28.8 29.6 Z" />
+          <path d="M32 32 L18 18 L34.4 28.8 Z" />
+        </g>
+        <g stroke="currentColor" stroke-width="1" stroke-linejoin="round">
+          <path d="M32 8 L35.5 28.5 L32 32 Z" fill="currentColor" />
+          <path d="M32 8 L28.5 28.5 L32 32 Z" fill="none" />
+          <path d="M56 32 L35.5 35.5 L32 32 Z" fill="currentColor" />
+          <path d="M56 32 L35.5 28.5 L32 32 Z" fill="none" />
+          <path d="M32 56 L28.5 35.5 L32 32 Z" fill="currentColor" />
+          <path d="M32 56 L35.5 35.5 L32 32 Z" fill="none" />
+          <path d="M8 32 L28.5 28.5 L32 32 Z" fill="currentColor" />
+          <path d="M8 32 L28.5 35.5 L32 32 Z" fill="none" />
+        </g>
+        <circle cx="32" cy="32" r="1.8" fill="var(--paper)" stroke="currentColor" stroke-width="1" />
+      </svg>
 
-    <section class="features" id="features">
-      <h2>What you get</h2>
-      <div class="feature-grid">
-        <article class="card">
-          <div class="card-icon">⚡</div>
-          <h3>Agent mode</h3>
-          <p>Edits files, runs terminal commands, and searches the codebase — like Cursor Agent, not a Q&amp;A bot.</p>
-        </article>
-        <article class="card">
-          <div class="card-icon">🧠</div>
-          <h3>Continue built in</h3>
-          <p>Chat, inline edit, autocomplete, and diff apply wired into the VS Code fork sidebar.</p>
-        </article>
-        <article class="card">
-          <div class="card-icon">🔐</div>
-          <h3>Your models</h3>
-          <p>Configure OpenAI-compatible endpoints via <code>.env</code> and sync to Continue.</p>
-        </article>
-        <article class="card">
-          <div class="card-icon">🌐</div>
-          <h3>This dashboard</h3>
-          <p>Explore the project in the browser, try the demo chat, and copy launch commands.</p>
-        </article>
-      </div>
-    </section>
+      <!-- (b) WORDMARK -->
+      <p class="footer__brand"><a href="https://github.com/2441630833/Mobius" aria-label="Mobius home">mobius</a></p>
 
-    <section class="playground" id="playground">
-      <div class="playground-header">
-        <h2>Agent playground</h2>
-        <p>Simulated agent flow — no API key required. Type a task and watch agent mode respond.</p>
-      </div>
-      <div class="playground-shell">
-        <aside class="sidebar">
-          <div class="sidebar-title">Project</div>
-          <ul class="tree">
-            <li><span class="folder">physical_AI_IDE/</span></li>
-            <li class="indent"><span class="folder">vscode/</span></li>
-            <li class="indent"><span class="folder">continue/</span></li>
-            <li class="indent"><span class="folder">web/</span></li>
-            <li class="indent"><span class="file">config/continue-config.yaml</span></li>
-            <li class="indent"><span class="file">package.json</span></li>
-          </ul>
-        </aside>
-        <div class="chat-panel">
-          <div class="chat-toolbar">
-            <span class="mode-pill">Agent</span>
-            <span class="model-pill">claude-sonnet-4-6</span>
-          </div>
-          <div class="chat-messages" id="chat-messages" role="log" aria-live="polite"></div>
-          <form class="chat-input" id="chat-form">
-            <input
-              type="text"
-              id="chat-input"
-              placeholder="e.g. Create a beautiful web UI for this project"
-              autocomplete="off"
-            />
-            <button type="submit" class="btn btn-primary">Send</button>
-          </form>
+      <!-- (c) TAGLINE -->
+      <p class="footer__tagline">The scenic route to shipped work. Plan, track, and deliver from town to town.</p>
+
+      <!-- MOBIUS DESKTOP DOWNLOAD LINKS -->
+      <div class="footer__downloads" role="group" aria-label="Download Mobius Desktop">
+        <div class="downloads__group">
+          <a href="https://github.com/2441630833/Mobius/releases/download/v1.0.2/MobiusSetup.exe" class="download-btn download-btn--win" title="Download Mobius for Windows (x64 Installer)" target="_blank" rel="noopener noreferrer">
+            <svg class="download-icon" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M0 2.22 6.55 1.3v6.23H0V2.22zm0 6.03h6.55v6.23L0 13.56V8.25zm7.45-7.1 8.55-1.22V7.53H7.45V1.15zm8.55 7.1v6.38L7.45 13.4V8.25h8.55z"/>
+            </svg>
+            <span>Windows</span>
+            <span class="download-tag">.exe</span>
+          </a>
+          <a href="https://github.com/2441630833/Mobius/releases/download/v1.0.3/Mobius-1.126.0-macOS-arm64.dmg" class="download-btn download-btn--mac" title="Download Mobius for macOS (Apple Silicon DMG)" target="_blank" rel="noopener noreferrer">
+            <svg class="download-icon" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M11.182.008C11.148-.03 9.923.23 8.957 1.344c-1.02 1.176-.902 2.536-.88 2.628.02.008 1.258-.024 2.234-1.172.978-1.147.893-2.673.871-2.792zm2.083 4.887c-.156.098-2.222 1.31-2.203 3.827.02 2.99 2.559 4.024 2.695 4.081-.02.099-.413 1.458-1.378 2.875-.85 1.242-1.737 2.483-3.11 2.507-1.353.023-1.785-.81-3.336-.81-1.574 0-2.054.787-3.336.833-1.332.046-2.35-1.333-3.208-2.575C-.33 13.57-.96 8.924.908 5.71c.928-1.594 2.585-2.604 4.38-2.63 1.372-.023 2.665.926 3.5.926.834 0 2.398-1.145 4.04-0.976.688.028 2.622.277 3.861 2.09-.098.062-1.34.782-1.424.875z"/>
+            </svg>
+            <span>macOS</span>
+            <span class="download-tag">.dmg</span>
+          </a>
+          <a href="https://github.com/2441630833/Mobius/releases/download/v1.0.3/mobius_1.126.0_amd64.deb" class="download-btn download-btn--linux" title="Download Mobius for Linux (Debian / Ubuntu .deb)" target="_blank" rel="noopener noreferrer">
+            <svg class="download-icon" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M8 0c-.86 0-1.6.48-1.92 1.2l-.08.2-.18.04C3.86 1.84 2.3 3.4 2.3 5.38c0 1.34.7 2.52 1.76 3.2l.24.16v.28c0 1.42.5 2.72 1.36 3.76l.2.24-.12.28C5.24 14.52 4.14 15.3 3 15.6c-.2.06-.3.26-.26.46.06.2.26.3.46.26 1.42-.38 2.76-1.32 3.42-2.54l.14-.28.32.06c.3.06.6.08.92.08s.62-.02.92-.08l.32-.06.14.28c.66 1.22 2 2.16 3.42 2.54.2.04.4-.06.46-.26.04-.2-.06-.4-.26-.46-1.14-.3-2.24-1.08-2.74-2.3l-.12-.28.2-.24c.86-1.04 1.36-2.34 1.36-3.76v-.28l.24-.16c1.06-.68 1.76-1.86 1.76-3.2 0-1.98-1.56-3.54-3.52-3.94l-.18-.04-.08-.2C10.6.48 9.86 0 8 0z"/>
+            </svg>
+            <span>Linux</span>
+            <span class="download-tag">.deb</span>
+          </a>
         </div>
       </div>
-    </section>
 
-    <section class="start" id="start">
-      <h2>Quick start</h2>
-      <ol class="steps">
-        <li>
-          <span class="step-num">1</span>
-          <div>
-            <h3>Configure API</h3>
-            <pre><code>copy .env.example .env
-# Set OPENAI_API_KEY</code></pre>
-          </div>
-        </li>
-        <li>
-          <span class="step-num">2</span>
-          <div>
-            <h3>Build (first time)</h3>
-            <pre><code>npm run install:continue
-npm run build:vscode</code></pre>
-          </div>
-        </li>
-        <li>
-          <span class="step-num">3</span>
-          <div>
-            <h3>Launch</h3>
-            <pre><code>npm start          # Mobius
-npm run web        # This page (port 5173)
-npm run sync:config # Push .env → Continue</code></pre>
-          </div>
-        </li>
-      </ol>
-      <div class="tip card">
-        <strong>Agent mode tip:</strong> In Continue sidebar, select <em>Agent</em> (not Chat). Chat mode has no tools and will ask questions instead of editing files.
-      </div>
-    </section>
-  </main>
+      <!-- (d) NAV (8 EXACT ITEMS) -->
+      <nav class="footer__nav" aria-label="Footer">
+        <ul>
+          <li><a href="https://github.com/2441630833/Mobius/releases">Platform</a></li>
+          <li><a href="https://github.com/2441630833/Mobius/actions">Workflows</a></li>
+          <li><a href="https://github.com/2441630833/Mobius#integrations">Integrations</a></li>
+          <li><a href="https://github.com/2441630833/Mobius#for-teams">For Teams</a></li>
+          <li><a href="https://github.com/2441630833/Mobius#for-studios">For Studios</a></li>
+          <li><a href="https://github.com/2441630833/Mobius#readme">About</a></li>
+          <li><a href="https://github.com/2441630833/Mobius/commits/main">Journal</a></li>
+          <li><a href="https://github.com/2441630833/Mobius/issues">Contact</a></li>
+        </ul>
+      </nav>
 
-  <footer class="footer">
-    <span>Mobius · MIT</span>
-    <span>VS Code OSS + Continue</span>
+      <!-- (e) COPYRIGHT -->
+      <p class="footer__copy">© <span id="year">2026</span> <a href="https://github.com/2441630833/Mobius">Mobius Works Ltd.</a></p>
+    </div>
   </footer>
 
-  <dialog class="modal" id="launch-modal">
-    <div class="modal-content">
-      <button type="button" class="modal-close" id="modal-close" aria-label="Close">&times;</button>
-      <h3>Launch Mobius</h3>
-      <p>Run from the project root in PowerShell:</p>
-      <pre><code id="launch-cmd">npm start</code></pre>
-      <button type="button" class="btn btn-primary" id="copy-launch">Copy command</button>
-    </div>
-  </dialog>
+  <!-- 8. JAVASCRIPT -->
+  <script>
+    // 1. Set #year textContent to new Date().getFullYear()
+    const yearEl = document.getElementById("year");
+    if (yearEl) {
+      yearEl.textContent = new Date().getFullYear();
+    }
 
-  <script src="js/app.js"></script>
+    // 2. IIFE for the video
+    (function () {
+      const video = document.querySelector(".footer__video");
+      if (!video) return;
+
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        video.removeAttribute("autoplay");
+        video.pause();
+        return;
+      }
+
+      if ("IntersectionObserver" in window) {
+        const observer = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (entry) {
+              if (entry.isIntersecting) {
+                video.play().catch(function () {});
+              } else {
+                video.pause();
+              }
+            });
+          },
+          { threshold: 0.15 }
+        );
+        observer.observe(video);
+      }
+    })();
+  </script>
 </body>
 </html>
