@@ -50,11 +50,10 @@ function Invoke-VsCodeGulp {
     & $nodeExe --experimental-strip-types --max-old-space-size=8192 ./node_modules/gulp/bin/gulp.js $Task
 }
 
-Write-Host "`n=== Mobius Package (win32-$Arch, $Target-setup) ===" -ForegroundColor Cyan
-# Default: incremental (esbuild + min-ci). Full rebuild only when PACKAGE_FULL=1.
-if ($env:PACKAGE_FULL -eq "1") {
+# Default: incremental (esbuild + min-ci). Full rebuild only when PACKAGE_FULL=1 or PACKAGE_INCREMENTAL=0.
+if ($env:PACKAGE_FULL -eq "1" -or $env:PACKAGE_INCREMENTAL -eq "0") {
     Remove-Item Env:PACKAGE_INCREMENTAL -ErrorAction SilentlyContinue
-} elseif ($env:PACKAGE_INCREMENTAL -ne "0" -and $env:SKIP_VSCODE_BUILD -ne "1") {
+} elseif ($env:SKIP_VSCODE_BUILD -ne "1") {
     $env:PACKAGE_INCREMENTAL = "1"
 }
 $mode = if ($env:SKIP_VSCODE_BUILD -eq "1") { "setup-only (no compile)" } elseif ($env:PACKAGE_INCREMENTAL -eq "1") { "incremental" } else { "full" }
@@ -153,16 +152,11 @@ if ($env:SKIP_VSCODE_BUILD -ne "1") {
     if ($env:SKIP_COPILOT_BUILD -ne "0") { $env:SKIP_COPILOT_BUILD = "1" }
 
     try {
-        if ($env:PACKAGE_INCREMENTAL -eq "1") {
+        $outMin = Join-Path $VsCodeDir "out-vscode-min"
+        if ($env:PACKAGE_INCREMENTAL -eq "1" -and (Test-Path $outMin)) {
             # Incremental: refresh local extensions (esp. Continue) into .build/extensions,
             # rebundle desktop JS, then re-package client tree.
             # Skips clean/rebuild of marketplace + all built-in extensions (slow part of full min).
-            $outMin = Join-Path $VsCodeDir "out-vscode-min"
-            if (-not (Test-Path $outMin)) {
-                throw "PACKAGE_INCREMENTAL=1 requires a prior full build (missing out-vscode-min). Run without PACKAGE_INCREMENTAL once."
-            }
-            # min-ci packages from .build/extensions -- Continue rebuilds under extensions/continue
-            # are invisible until this step re-runs vsce packaging into .build.
             Invoke-Step "Gulp compile-non-native-extensions-build (refresh Continue)" {
                 Invoke-VsCodeGulp "compile-non-native-extensions-build"
             }
@@ -173,6 +167,9 @@ if ($env:SKIP_VSCODE_BUILD -ne "1") {
                 Invoke-VsCodeGulp "vscode-win32-$Arch-min-ci"
             }
         } else {
+            if ($env:PACKAGE_INCREMENTAL -eq "1") {
+                Write-Host "[WARN] out-vscode-min not found ($outMin); falling back to full release build." -ForegroundColor Yellow
+            }
             Invoke-Step "Gulp vscode-win32-$Arch-min (esbuild release)" {
                 Invoke-VsCodeGulp "vscode-win32-$Arch-min"
             }

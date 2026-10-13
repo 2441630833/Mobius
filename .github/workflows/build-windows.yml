@@ -66,6 +66,8 @@ jobs:
           $arch = "${{ inputs.arch || 'x64' }}"
           $target = "${{ inputs.target || 'user' }}"
           $env:SKIP_OLLAMA_BUNDLE = '1'
+          $env:PACKAGE_FULL = '1'
+          $env:PACKAGE_INCREMENTAL = '0'
           powershell -ExecutionPolicy Bypass -Command "& './scripts/package.ps1' -Arch $arch -Target $target"
 
           # Collect artifacts into dist/
