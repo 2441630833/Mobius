@@ -1,11 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Intelligence Designed To Evolve</title>
+  <title>Mobius — 会自我进化的智能体开发环境</title>
+  <meta name="description" content="会自我进化的智能体开发环境 (ADE)。Mobius 沉淀经验为可复用技能，能力随使用持续累积。下载适用于 Windows、macOS 与 Linux 的 Mobius 桌面端。" />
 
-  <!-- 1. Inter (UI) via Google Fonts -->
+  <link rel="icon" type="image/png" href="data:image/png;base64,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" />
+
+  <!-- 1. Inter UI -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -13,13 +16,13 @@
     rel="stylesheet"
   />
 
-  <!-- 2. BubbledotICG-FinePos (primary display — retro dot-matrix) via OnlineWebFonts CDN -->
+  <!-- 2. BubbledotICG-FinePos Display Font -->
   <link
     href="https://db.onlinewebfonts.com/c/8cb707a9b8a73f8a7403336b861c3074?family=BubbledotICG-FinePos"
     rel="stylesheet"
   />
 
-  <!-- 4. Font Awesome 6.5.2 (enterprise brand icons) from cdnjs -->
+  <!-- 3. Font Awesome 6.5.2 -->
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
@@ -41,7 +44,7 @@
     </video>
   </div>
 
-  <!-- Mobile Overlay & Modal Sheet Menu -->
+  <!-- Mobile Overlay & Menu -->
   <div class="mobile-overlay" id="mobileOverlay" hidden></div>
   <div
     class="mobile-menu"
@@ -51,35 +54,37 @@
     aria-label="Mobile Navigation"
     hidden
   >
-    <a href="#home" class="mobile-link active">Home</a>
-    <a href="#product" class="mobile-link">Product</a>
-    <a href="#case-studies" class="mobile-link">Case Studies</a>
-    <a href="#contact" class="mobile-link">Contact</a>
-    <a href="#signin" class="mobile-sign-in">Sign in</a>
+    <a href="#quick-install" class="mobile-link" data-i18n="navFastInstall">一键极速安装</a>
+    <a href="#downloads" class="mobile-link" data-i18n="navDownloads">桌面端下载</a>
+    <a href="https://github.com/2441630833/Mobius/releases" target="_blank" rel="noopener noreferrer" class="mobile-link" data-i18n="navReleases">更新日志 (Releases)</a>
+    <button type="button" class="mobile-lang-btn" id="mobileLangBtn">Switch to English</button>
+    <a href="https://github.com/2441630833/Mobius" target="_blank" rel="noopener noreferrer" class="mobile-sign-in">
+      <i class="fa-brands fa-github"></i> GitHub 仓库
+    </a>
   </div>
 
-  <!-- Single-viewport content container -->
+  <!-- Single-viewport page container -->
   <div class="page">
     <!-- 1) HEADER -->
     <header class="header">
-      <a href="#" class="logo-btn" aria-label="Home">
-        <img
-          src="assets/logo.webp"
-          alt=""
-          class="logo-img"
-          width="52"
-          height="52"
-        />
+      <a href="https://github.com/2441630833/Mobius" class="logo-btn" title="Mobius on GitHub" aria-label="Mobius Home">
+        <img src="assets/logo.webp" alt="Mobius" class="logo-img" width="52" height="52" />
       </a>
 
       <nav class="nav-pill" aria-label="Primary Navigation">
-        <a href="#home" class="nav-link active">Home</a>
-        <a href="#product" class="nav-link">Product</a>
-        <a href="#case-studies" class="nav-link">Case Studies</a>
-        <a href="#contact" class="nav-link">Contact</a>
+        <a href="#quick-install" class="nav-link active" data-i18n="navFastInstall">一键安装</a>
+        <a href="#downloads" class="nav-link" data-i18n="navDownloads">桌面下载</a>
+        <a href="https://github.com/2441630833/Mobius/releases" target="_blank" rel="noopener noreferrer" class="nav-link" data-i18n="navReleases">版本发布</a>
+        <a href="https://github.com/2441630833/Mobius#readme" target="_blank" rel="noopener noreferrer" class="nav-link" data-i18n="navAbout">关于项目</a>
       </nav>
 
-      <a href="#signin" class="sign-in-btn">Sign in</a>
+      <div class="header-right">
+        <button type="button" class="lang-switch-btn" id="langSwitchBtn" aria-label="Switch Language">English</button>
+        <a href="https://github.com/2441630833/Mobius" target="_blank" rel="noopener noreferrer" class="sign-in-btn github-btn" title="View Source on GitHub">
+          <i class="fa-brands fa-github" aria-hidden="true"></i>
+          <span>GitHub</span>
+        </a>
+      </div>
 
       <button
         class="burger-btn"
@@ -96,93 +101,171 @@
 
     <!-- 2) HERO -->
     <main class="hero">
-      <!-- Trust row (“Trusted by 2000+ Enterprises”) -->
-      <div class="trust-row anim" style="--d: 0.05s">
-        <div class="avatar-ring avatar-ring-1" aria-label="Microsoft">
-          <div class="avatar-inner">
-            <i class="fa-brands fa-microsoft" aria-hidden="true"></i>
-          </div>
-        </div>
-        <div class="avatar-ring avatar-ring-2" aria-label="Amazon">
-          <div class="avatar-inner">
-            <i class="fa-brands fa-amazon" aria-hidden="true"></i>
-          </div>
-        </div>
-        <div class="avatar-ring avatar-ring-3" aria-label="Google">
-          <div class="avatar-inner">
-            <i class="fa-brands fa-google" aria-hidden="true"></i>
-          </div>
-        </div>
-        <div class="trust-pill">
-          <span class="trust-text">Trusted by 2000+ Enterprises</span>
-        </div>
+      <!-- High-tech self-evolving badge -->
+      <div class="hero-badge anim" style="--d: 0.05s">
+        <span class="badge-dot"></span>
+        <span class="badge-text" data-i18n="badgeText">会自我进化的智能体开发环境 (ADE)</span>
       </div>
 
-      <!-- Headline -->
+      <!-- Dot-matrix Headline -->
       <h1 class="headline anim">
         <span class="headline-line line-1">Intelligence</span>
         <span class="headline-line line-2">Designed To Evolve</span>
       </h1>
 
-      <!-- Subhead (exact copy) -->
-      <p class="subhead anim" style="--d: 0.28s">
-        Build applications that reason, adapt and collaborate using a modular
-        AI platform designed for production.
+      <!-- Subhead / Product Tagline -->
+      <p class="subhead anim" style="--d: 0.22s" data-i18n="tagline">
+        会自我进化的智能体开发环境。越用越聪明的 AI 编程伙伴。
       </p>
 
-      <!-- CTA -->
-      <a href="#get-started" class="cta-btn" style="--d: 0.4s">
-        Get Started
-      </a>
+      <!-- 3 Desktop Downloads Group -->
+      <section class="downloads-section anim" id="downloads" style="--d: 0.32s" aria-label="Desktop Downloads">
+        <div class="downloads-group" role="group" aria-label="Download Mobius Desktop">
+          <!-- Windows -->
+          <a
+            href="https://github.com/2441630833/Mobius/releases/download/v1.0.2/MobiusSetup.exe"
+            class="download-btn download-btn--win"
+            title="下载 Mobius Windows 版 (x64 安装包)"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <i class="fa-brands fa-windows download-btn-icon" aria-hidden="true"></i>
+            <span class="download-btn-name">Windows</span>
+            <span class="download-btn-tag">.exe</span>
+          </a>
+
+          <!-- macOS -->
+          <a
+            href="https://github.com/2441630833/Mobius/releases/download/v1.0.3/Mobius-1.126.0-macOS-arm64.dmg"
+            class="download-btn download-btn--mac"
+            title="下载 Mobius macOS 版 (Apple Silicon DMG)"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <i class="fa-brands fa-apple download-btn-icon" aria-hidden="true"></i>
+            <span class="download-btn-name">macOS</span>
+            <span class="download-btn-tag">.dmg</span>
+          </a>
+
+          <!-- Linux -->
+          <a
+            href="https://github.com/2441630833/Mobius/releases/download/v1.0.3/mobius_1.126.0_amd64.deb"
+            class="download-btn download-btn--linux"
+            title="下载 Mobius Linux 版 (Debian / Ubuntu .deb)"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <i class="fa-brands fa-linux download-btn-icon" aria-hidden="true"></i>
+            <span class="download-btn-name">Linux</span>
+            <span class="download-btn-tag">.deb</span>
+          </a>
+        </div>
+      </section>
+
+      <!-- Terminal One-Line Fast Installer Card -->
+      <section class="quick-install anim" id="quick-install" style="--d: 0.42s" role="region" aria-label="Terminal One-Line Fast Installer and Updater">
+        <div class="quick-install__topbar">
+          <div class="quick-install__window-controls" aria-hidden="true">
+            <span class="window-dot window-dot--close"></span>
+            <span class="window-dot window-dot--min"></span>
+            <span class="window-dot window-dot--max"></span>
+          </div>
+
+          <div class="quick-install__tabs" role="tablist" aria-label="Operating System Selection">
+            <button type="button" class="quick-tab-btn active" data-os="mac" role="tab" aria-selected="true">
+              <i class="fa-brands fa-apple" aria-hidden="true"></i>
+              <span>macOS</span>
+            </button>
+            <button type="button" class="quick-tab-btn" data-os="win" role="tab" aria-selected="false">
+              <i class="fa-brands fa-windows" aria-hidden="true"></i>
+              <span>Windows</span>
+            </button>
+            <button type="button" class="quick-tab-btn" data-os="linux" role="tab" aria-selected="false">
+              <i class="fa-brands fa-linux" aria-hidden="true"></i>
+              <span>Linux</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="quick-install__body">
+          <div class="quick-install__code-row">
+            <span class="quick-install__prompt" id="installPrompt" aria-hidden="true">$</span>
+            <code id="installCmd">curl -fsSL https://raw.githubusercontent.com/2441630833/Mobius/main/scripts/install-mac.sh | bash</code>
+            <button type="button" class="quick-install__copy" id="copyInstallBtn" aria-label="复制一键安装命令" title="复制">
+              <i class="fa-regular fa-copy copy-icon" aria-hidden="true"></i>
+              <span class="copy-btn-text" data-i18n="copyText">复制</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="quick-install__footer">
+          <div class="quick-install__note">
+            <i class="fa-solid fa-arrows-rotate note-icon" aria-hidden="true"></i>
+            <span data-i18n="quickNote">全新安装或本地已安装版本原位一键同步更新</span>
+          </div>
+
+          <button type="button" class="mac-guide-trigger" id="openMacGuide">
+            <i class="fa-solid fa-shield-halved trigger-shield-icon" aria-hidden="true"></i>
+            <span data-i18n="macGuideTrigger">macOS 提示“无法打开”？3 秒放行指南</span>
+            <span class="trigger-arrow" aria-hidden="true">→</span>
+          </button>
+        </div>
+      </section>
     </main>
 
-    <!-- 3) STATS FOOTER -->
-    <footer class="stats-footer">
-      <div class="stat-item anim" style="--d: 0.5s">
-        <span class="stat-icon" aria-hidden="true">&lt;</span>
-        <div class="stat-content">
-          <div class="stat-value-row">
-            <span class="stat-value" data-target="120" data-decimals="0">0</span>
-            <span class="stat-suffix">ms</span>
-          </div>
-          <span class="stat-label">Inference Time</span>
-        </div>
-      </div>
-
-      <div class="stat-item anim" style="--d: 0.58s">
-        <span class="stat-icon" aria-hidden="true">%</span>
-        <div class="stat-content">
-          <div class="stat-value-row">
-            <span class="stat-value" data-target="99.99" data-decimals="2">0</span>
-            <span class="stat-suffix">%</span>
-          </div>
-          <span class="stat-label">Platform Uptime</span>
-        </div>
-      </div>
-
-      <div class="stat-item anim" style="--d: 0.66s">
-        <span class="stat-icon" aria-hidden="true">*</span>
-        <div class="stat-content">
-          <div class="stat-value-row">
-            <span class="stat-value" data-target="24" data-decimals="0">0</span>
-            <span class="stat-suffix">/7</span>
-          </div>
-          <span class="stat-label">Autonomous Runtime</span>
-        </div>
-      </div>
-
-      <div class="stat-item anim" style="--d: 0.74s">
-        <span class="stat-icon" aria-hidden="true">#</span>
-        <div class="stat-content">
-          <div class="stat-value-row">
-            <span class="stat-value" data-target="2.4" data-decimals="1">0</span>
-            <span class="stat-suffix">M</span>
-          </div>
-          <span class="stat-label">Context Windows</span>
-        </div>
+    <!-- 3) COMPACT FOOTER -->
+    <footer class="footer-compact">
+      <div class="footer-meta">
+        <span>© <span id="year">2026</span> Mobius. Free & Open Source.</span>
+        <span class="footer-sep" aria-hidden="true">·</span>
+        <a href="https://github.com/2441630833/Mobius" target="_blank" rel="noopener noreferrer" class="footer-link">
+          <i class="fa-brands fa-github" aria-hidden="true"></i> GitHub
+        </a>
+        <span class="footer-sep" aria-hidden="true">·</span>
+        <a href="https://github.com/2441630833/Mobius/releases" target="_blank" rel="noopener noreferrer" class="footer-link" data-i18n="navReleases">Releases</a>
       </div>
     </footer>
   </div>
+
+  <!-- macOS Security / Gatekeeper Unblock Guide Dialog -->
+  <dialog class="mac-guide-modal" id="macGuideModal" aria-labelledby="macGuideTitle">
+    <div class="mac-guide-modal__inner">
+      <div class="mac-guide-header">
+        <div class="mac-guide-header-title">
+          <i class="fa-brands fa-apple mac-modal-icon" aria-hidden="true"></i>
+          <h3 id="macGuideTitle" data-i18n="modalTitle">macOS 首次打开放行指南</h3>
+        </div>
+        <button type="button" class="modal-close-btn" id="closeMacGuide" aria-label="关闭">&times;</button>
+      </div>
+
+      <p class="mac-guide-intro" data-i18n-html="modalIntro">
+        由于 Mobius 为免费开源软件，尚未向 Apple 购买高额年费公证证书。从浏览器下载后首次打开若提示 <em>“无法验证是否包含恶意软件”</em> 属于 macOS Gatekeeper 正常拦截，只需运行一行命令即可彻底解除：
+      </p>
+
+      <div class="guide-method-card">
+        <div class="guide-method-badge">
+          <i class="fa-solid fa-check" aria-hidden="true"></i>
+          <span data-i18n="modalMethodBadge">一步解除 · 永久生效</span>
+        </div>
+        <p class="guide-method-step" data-i18n-html="modalStep">将 Mobius 拖入「应用程序」后，打开 Mac「终端 (Terminal)」并运行：</p>
+        <div class="code-box">
+          <code>sudo xattr -cr /Applications/Mobius.app</code>
+          <button type="button" class="copy-inline-btn" data-copy="sudo xattr -cr /Applications/Mobius.app" title="复制放行命令">
+            <i class="fa-regular fa-copy copy-inline-icon" aria-hidden="true"></i>
+            <span class="copy-inline-text" data-i18n="copyText">复制</span>
+          </button>
+        </div>
+        <div class="guide-hint-box">
+          <span class="guide-hint-icon">💡</span>
+          <span data-i18n="modalHint">输入 Mac 锁屏开机密码后回车即可（输入密码时屏幕不会显示字符，直接输完回车）。之后双击 Mobius 图标直接秒开，永久不再拦截！</span>
+        </div>
+      </div>
+
+      <div class="mac-guide-footer">
+        <button type="button" class="guide-done-btn" id="doneMacGuide" data-i18n="modalDone">我知道了</button>
+      </div>
+    </div>
+  </dialog>
 
   <script src="main.js"></script>
 </body>
