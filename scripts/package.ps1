@@ -105,12 +105,11 @@ if ($env:SKIP_GLM_OCR_BUNDLE -ne "1") {
     Invoke-Step "Ensure GLM-OCR ONNX model" {
         & "$Root\scripts\ensure-glm-ocr-onnx.ps1" -Strict
     }
+    Invoke-Step "Verify GLM-OCR ONNX" {
+        & "$Root\scripts\verify-glm-ocr-onnx.ps1"
+    }
 } else {
     Write-Host "`n=== GLM-OCR ONNX (skipped: SKIP_GLM_OCR_BUNDLE=1) ===" -ForegroundColor Yellow
-}
-
-Invoke-Step "Verify GLM-OCR ONNX" {
-    & "$Root\scripts\verify-glm-ocr-onnx.ps1"
 }
 
 if ($env:SKIP_CONTINUE_BUILD -ne "1") {
@@ -139,6 +138,14 @@ if ($env:SKIP_VSCODE_BUILD -ne "1") {
         if (Test-Path $vsWhere) {
             $vsPath = & $vsWhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2>$null
             if ($vsPath) { $env:vs2022_install = $vsPath }
+        }
+    }
+
+    # Ensure VS Code dependencies are installed if missing (e.g. clean CI runner)
+    $gulpBin = Join-Path $VsCodeDir "node_modules\gulp\bin\gulp.js"
+    if (-not (Test-Path $gulpBin)) {
+        Invoke-Step "Install VS Code dependencies" {
+            & "$Root\scripts\install-vscode-deps.ps1"
         }
     }
 

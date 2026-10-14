@@ -178,6 +178,10 @@ jobs:
         run: |
           choco install innosetup --no-progress -y
 
+      - name: Install root dependencies
+        run: |
+          npm install --ignore-scripts
+
       - name: Check prerequisites
         run: |
           npm run check
@@ -185,7 +189,9 @@ jobs:
       - name: Build and package Mobius for Windows
         shell: pwsh
         run: |
+          $env:SKIP_GLM_OCR_BUNDLE = '1'
           $env:SKIP_OLLAMA_BUNDLE = '1'
+          $env:ELECTRON_MIRROR = 'official'
           $env:PACKAGE_FULL = '1'
           $env:PACKAGE_INCREMENTAL = '0'
           powershell -ExecutionPolicy Bypass -Command "& './scripts/package.ps1' -Arch x64 -Target user"
@@ -195,6 +201,7 @@ jobs:
           $version = (Get-Content vscode\package.json -Raw | ConvertFrom-Json).version
           if (Test-Path "$setupDir\MobiusSetup.exe") {
             Copy-Item "$setupDir\MobiusSetup.exe" "dist\Mobius-Setup-${version}-win32-x64.exe" -Force
+            Copy-Item "$setupDir\MobiusSetup.exe" "dist\MobiusSetup.exe" -Force
           }
           $clientDir = "VSCode-win32-x64"
           if (Test-Path $clientDir) {

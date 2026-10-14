@@ -38,6 +38,11 @@ function Set-ElectronDownloadMirror {
         Write-Host "Electron mirror: official GitHub (ELECTRON_MIRROR=official)" -ForegroundColor Yellow
         return
     }
+    if ($env:CI -eq "true" -and -not $env:ELECTRON_MIRROR) {
+        Remove-Item Env:ELECTRON_MIRROR -ErrorAction SilentlyContinue
+        Write-Host "Electron mirror: official GitHub (CI environment)" -ForegroundColor Yellow
+        return
+    }
     if (-not $env:ELECTRON_MIRROR) {
         # GitHub releases often time out in CN; npmmirror hosts the same artifacts.
         $env:ELECTRON_MIRROR = "https://npmmirror.com/mirrors/electron/"
