@@ -434,11 +434,22 @@ Save-PngAsIco -PngPaths $faviconInputs -OutputPath $faviconDest
 $pyScript = Join-Path $Root "scripts\generate-mac-icns.py"
 $targetIcns = Join-Path $VsCodeDir "resources\darwin\code.icns"
 if (Test-Path $pyScript) {
-    $pyExe = if (Get-Command py -ErrorAction SilentlyContinue) { "py" } elseif (Get-Command python3 -ErrorAction SilentlyContinue) { "python3" } else { "python" }
-    & $pyExe -c "import PIL" 2>$null
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "Updating macOS code.icns..." -ForegroundColor Cyan
-        & $pyExe $pyScript $LogoSrc $targetIcns 2>$null
+    try {
+        $pyExe = if (Get-Command python -ErrorAction SilentlyContinue) { "python" } elseif (Get-Command py -ErrorAction SilentlyContinue) { "py" } else { "python3" }
+        $prevEap = $ErrorActionPreference
+        $ErrorActionPreference = 'SilentlyContinue'
+        $hasPil = $false
+        $null = & $pyExe -c "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('PIL') else 1)" 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            $hasPil = $true
+        }
+        $ErrorActionPreference = $prevEap
+        if ($hasPil) {
+            Write-Host "Updating macOS code.icns..." -ForegroundColor Cyan
+            & $pyExe $pyScript $LogoSrc $targetIcns 2>&1 | Out-Null
+        }
+    } catch {
+        # Optional macOS icns generation, safe to skip
     }
 }
 $global:LASTEXITCODE = 0
