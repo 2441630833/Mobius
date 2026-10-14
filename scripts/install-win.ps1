@@ -1,4 +1,4 @@
-﻿# =============================================================================
+# =============================================================================
 # Mobius IDE — Windows One-Line Fast Installer & Auto-Updater
 # Usage:
 #   irm https://raw.githubusercontent.com/2441630833/Mobius/main/scripts/install-win.ps1 | iex
