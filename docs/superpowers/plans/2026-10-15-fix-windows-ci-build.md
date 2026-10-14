@@ -35,10 +35,10 @@
 
 1. [x] Fix `scripts/package.ps1`, `scripts/install-continue.ps1`, and `scripts/init-electron-env.ps1`.
 2. [x] Update `.github/workflows/build-windows.yml` and `.github/workflows/build-all-platforms.yml`.
-3. [ ] Commit changes cleanly using UTF-8 Python helper.
-4. [ ] Push commits to `origin/main`.
-5. [ ] Trigger the `Build Windows Desktop (.exe & zip)` GitHub Actions workflow with `release_tag: v1.0.4`.
-6. [ ] Verify workflow execution status.
+3. [x] Commit changes cleanly using UTF-8 Python helper.
+4. [x] Push commits to `origin/main`.
+5. [x] Trigger the `Build Windows Desktop (.exe & zip)` GitHub Actions workflow with `release_tag: v1.0.4`.
+6. [x] Verify workflow execution status.
 
 ## 4. Acceptance Criteria
 
