@@ -6,8 +6,8 @@ document.addEventListener("DOMContentLoaded", () => {
       docDescription: "会自我进化的智能体开发环境 (ADE)。Mobius 沉淀经验为可复用技能，能力随使用持续累积。下载适用于 Windows、macOS 与 Linux 的 Mobius 桌面端。",
       badgeText: "会自我进化的智能体开发环境 (ADE)",
       tagline: "会自我进化的智能体开发环境。越用越聪明的 AI 编程伙伴。",
-      navFastInstall: "一键安装",
-      navDownloads: "桌面下载",
+      navFastInstall: "快速安装",
+      navDownloads: "客户端下载",
       navReleases: "版本发布",
       navAbout: "关于项目",
       copyText: "复制",
@@ -21,10 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
       modalHint: "输入 Mac 锁屏开机密码后回车即可（输入密码时屏幕不会显示字符，直接输完回车）。之后双击 Mobius 图标直接秒开，永久不再拦截！",
       modalDone: "我知道了",
       langSwitchText: "English",
-      mobileLangText: "Switch to English",
-      winBtnTitle: "下载 Mobius Windows 版 (x64 安装包)",
-      macBtnTitle: "下载 Mobius macOS 版 (Apple Silicon DMG)",
-      linuxBtnTitle: "下载 Mobius Linux 版 (Debian / Ubuntu .deb)"
+      mobileLangText: "Switch to English"
     },
     en: {
       docTitle: "Mobius — A Self-Evolving Agentic Development Environment",
@@ -46,10 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
       modalHint: "Enter your Mac lock-screen password and press Enter (characters will not show while typing). Mobius will open immediately without Gatekeeper prompts!",
       modalDone: "Got It",
       langSwitchText: "中文",
-      mobileLangText: "切换为中文",
-      winBtnTitle: "Download Mobius for Windows (x64 Installer)",
-      macBtnTitle: "Download Mobius for macOS (Apple Silicon DMG)",
-      linuxBtnTitle: "Download Mobius for Linux (Debian / Ubuntu .deb)"
+      mobileLangText: "切换为中文"
     }
   };
 
@@ -105,25 +99,37 @@ document.addEventListener("DOMContentLoaded", () => {
   const mobileLangBtn = document.getElementById("mobileLangBtn");
   if (mobileLangBtn) mobileLangBtn.addEventListener("click", toggleLanguage);
 
-  // 2. Terminal Fast-Installer Tab Switcher
-  const commands = {
-    mac: "curl -fsSL https://raw.githubusercontent.com/2441630833/Mobius/main/scripts/install-mac.sh | bash",
-    win: "irm https://raw.githubusercontent.com/2441630833/Mobius/main/scripts/install-win.ps1 | iex",
-    linux: "curl -fsSL https://raw.githubusercontent.com/2441630833/Mobius/main/scripts/install-linux.sh | bash"
+  // 2. Authentic macOS Terminal Tab Switcher
+  const terminalProfiles = {
+    mac: {
+      title: "mobius — -zsh — 80×24",
+      login: "Last login: on ttys001 ~ Terminal",
+      promptHtml: '<span class="prompt-host">mobius@macbook</span>:<span class="prompt-dir">~</span><span class="prompt-char">%</span>',
+      cmd: "curl -fsSL https://raw.githubusercontent.com/2441630833/Mobius/main/scripts/install-mac.sh | bash",
+      showMacGuide: true
+    },
+    win: {
+      title: "PowerShell 7.4.5 — 80×24",
+      login: "Windows PowerShell · Copyright (C) Microsoft Corporation",
+      promptHtml: '<span class="prompt-host">PS</span> <span class="prompt-dir">C:\\Users\\Mobius</span><span class="prompt-char">&gt;</span>',
+      cmd: "irm https://raw.githubusercontent.com/2441630833/Mobius/main/scripts/install-win.ps1 | iex",
+      showMacGuide: false
+    },
+    linux: {
+      title: "mobius@ubuntu: ~ — bash — 80×24",
+      login: "Welcome to Ubuntu 24.04 LTS (GNU/Linux x86_64)",
+      promptHtml: '<span class="prompt-host">mobius@ubuntu</span>:<span class="prompt-dir">~</span><span class="prompt-char">$</span>',
+      cmd: "curl -fsSL https://raw.githubusercontent.com/2441630833/Mobius/main/scripts/install-linux.sh | bash",
+      showMacGuide: false
+    }
   };
 
-  const prompts = {
-    mac: "$",
-    win: "PS >",
-    linux: "$"
-  };
-
-  const tabs = document.querySelectorAll(".quick-tab-btn");
+  const tabs = document.querySelectorAll(".term-tab");
   const cmdEl = document.getElementById("installCmd");
   const promptEl = document.getElementById("installPrompt");
+  const titleTextEl = document.getElementById("terminalTitleText");
+  const loginLineEl = document.getElementById("termLoginLine");
   const macGuideBtn = document.getElementById("openMacGuide");
-
-  let currentOs = "mac";
 
   tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -134,15 +140,15 @@ document.addEventListener("DOMContentLoaded", () => {
       tab.classList.add("active");
       tab.setAttribute("aria-selected", "true");
 
-      currentOs = tab.getAttribute("data-os") || "mac";
-      if (cmdEl && commands[currentOs]) {
-        cmdEl.textContent = commands[currentOs];
-      }
-      if (promptEl && prompts[currentOs]) {
-        promptEl.textContent = prompts[currentOs];
-      }
+      const os = tab.getAttribute("data-os") || "mac";
+      const profile = terminalProfiles[os] || terminalProfiles.mac;
+
+      if (cmdEl) cmdEl.textContent = profile.cmd;
+      if (promptEl) promptEl.innerHTML = profile.promptHtml;
+      if (titleTextEl) titleTextEl.textContent = profile.title;
+      if (loginLineEl) loginLineEl.textContent = profile.login;
       if (macGuideBtn) {
-        macGuideBtn.style.display = currentOs === "mac" ? "inline-flex" : "none";
+        macGuideBtn.style.display = profile.showMacGuide ? "inline-flex" : "none";
       }
     });
   });
@@ -168,7 +174,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const originalText = textEl ? textEl.textContent : "";
     btn.classList.add("copied");
     if (textEl) {
-      textEl.textContent = I18N[currentLang]?.copiedText || "Copied";
+      textEl.textContent = I18N[currentLang]?.copiedText || "已复制";
     }
     setTimeout(() => {
       btn.classList.remove("copied");
@@ -204,39 +210,48 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // 4. macOS Security / Gatekeeper Guide Dialog
+  // 4. macOS Security / Gatekeeper Guide Dialog (Guaranteed Open & Close)
   const macModal = document.getElementById("macGuideModal");
   const openMacBtn = document.getElementById("openMacGuide");
   const closeMacBtn = document.getElementById("closeMacGuide");
   const doneMacBtn = document.getElementById("doneMacGuide");
 
-  function openModal() {
+  function openGuideModal(e) {
+    if (e) e.preventDefault();
     if (macModal) {
-      if (typeof macModal.showModal === "function") {
-        macModal.showModal();
-      } else {
-        macModal.setAttribute("open", "");
-      }
+      macModal.removeAttribute("hidden");
+      document.body.classList.add("menu-open");
     }
   }
 
-  function closeModal() {
+  function closeGuideModal(e) {
+    if (e) e.preventDefault();
     if (macModal) {
-      if (typeof macModal.close === "function") {
-        macModal.close();
-      } else {
-        macModal.removeAttribute("open");
-      }
+      macModal.setAttribute("hidden", "");
+      document.body.classList.remove("menu-open");
     }
   }
 
-  if (openMacBtn) openMacBtn.addEventListener("click", openModal);
-  if (closeMacBtn) closeMacBtn.addEventListener("click", closeModal);
-  if (doneMacBtn) doneMacBtn.addEventListener("click", closeModal);
+  if (openMacBtn) {
+    openMacBtn.addEventListener("click", openGuideModal);
+  }
+
+  // Event delegation fallback so it never fails to trigger
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("#openMacGuide")) {
+      openGuideModal(e);
+    }
+  });
+
+  if (closeMacBtn) closeMacBtn.addEventListener("click", closeGuideModal);
+  if (doneMacBtn) doneMacBtn.addEventListener("click", closeGuideModal);
 
   if (macModal) {
     macModal.addEventListener("click", (e) => {
-      if (e.target === macModal) closeModal();
+      // Close only if clicking the dark outer backdrop
+      if (e.target === macModal) {
+        closeGuideModal(e);
+      }
     });
   }
 
@@ -300,9 +315,7 @@ document.addEventListener("DOMContentLoaded", () => {
           linuxBtn.title = (currentLang === "zh" ? "下载 Mobius Linux 版" : "Download Mobius for Linux") + " (" + (linuxAsset.tag ? linuxAsset.tag + " · " : "") + linuxAsset.name + ")";
         }
       })
-      .catch(() => {
-        // Fallback safely to pre-configured static URLs
-      });
+      .catch(() => {});
   })();
 
   // 6. Mobile Menu Controls
@@ -348,7 +361,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       closeMobileMenu();
-      closeModal();
+      closeGuideModal();
     }
   });
 
