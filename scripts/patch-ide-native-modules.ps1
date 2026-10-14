@@ -127,11 +127,15 @@ if (-not $NoCrashReporter -and (Test-Path $UserDataDir)) {
         $argv['enable-crash-reporter'] = $true
         $changed = $true
     }
+    if (-not $argv.Contains('locale') -or [string]::IsNullOrWhiteSpace($argv['locale'])) {
+        $argv['locale'] = 'zh-cn'
+        $changed = $true
+    }
     if ($changed) {
         $argv | ConvertTo-Json -Depth 10 | Set-Content -Path $argvPath -Encoding UTF8
-        Write-Host "[ OK ] Enabled local crash reporting in $argvPath" -ForegroundColor Green
+        Write-Host "[ OK ] Configured runtime settings (locale=zh-cn, crash-reporter) in $argvPath" -ForegroundColor Green
     } else {
-        Write-Host "[ OK ] Crash reporting already enabled ($argvPath)" -ForegroundColor DarkGreen
+        Write-Host "[ OK ] Runtime settings already up-to-date ($argvPath)" -ForegroundColor DarkGreen
     }
 }
 

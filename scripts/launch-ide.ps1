@@ -62,7 +62,12 @@ if ($env:MOBIUS_SKIP_COPILOT -eq "1") {
 if (Test-Path $ElectronExe) {
     $env:VSCODE_SKIP_PRELAUNCH = "1"
 }
-& .\scripts\code.bat --agents --disable-workspace-trust @args
+$launchArgs = @("--agents", "--disable-workspace-trust")
+if (-not ($args -match '^--locale')) {
+    $launchArgs += "--locale=zh-cn"
+}
+$launchArgs += $args
+& .\scripts\code.bat @launchArgs
 $exitCode = $LASTEXITCODE
 Remove-Item Env:VSCODE_SKIP_PRELAUNCH -ErrorAction SilentlyContinue
 Pop-Location

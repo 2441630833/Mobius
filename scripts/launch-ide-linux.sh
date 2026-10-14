@@ -30,4 +30,12 @@ else
 fi
 
 echo "Launching Mobius dev client..."
-exec "$VSCODE_DIR/scripts/code.sh" "$@"
+EXTRA_ARGS=()
+if [[ ! "$*" =~ --locale ]]; then
+    EXTRA_ARGS+=(--locale=zh-cn)
+fi
+if [ $# -eq 0 ]; then
+    exec "$VSCODE_DIR/scripts/code.sh" --agents --disable-workspace-trust "${EXTRA_ARGS[@]}"
+else
+    exec "$VSCODE_DIR/scripts/code.sh" "$@" "${EXTRA_ARGS[@]}"
+fi

@@ -20,10 +20,14 @@ if [[ "$1" == "--release" ]] || [[ "$1" == "--app" ]]; then
     shift
     if [ -d "$APP_BUNDLE" ]; then
         echo "Opening Mobius release app bundle: $APP_BUNDLE"
+        EXTRA_ARGS=()
+        if [[ ! "$*" =~ --locale ]]; then
+            EXTRA_ARGS+=(--locale=zh-cn)
+        fi
         if [ $# -eq 0 ]; then
-            open "$APP_BUNDLE" --args --agents --disable-workspace-trust
+            open "$APP_BUNDLE" --args --agents --disable-workspace-trust "${EXTRA_ARGS[@]}"
         else
-            open "$APP_BUNDLE" --args "$@"
+            open "$APP_BUNDLE" --args "$@" "${EXTRA_ARGS[@]}"
         fi
         exit 0
     else
@@ -55,8 +59,12 @@ else
 fi
 
 echo "Launching Mobius macOS dev client..."
+EXTRA_ARGS=()
+if [[ ! "$*" =~ --locale ]]; then
+    EXTRA_ARGS+=(--locale=zh-cn)
+fi
 if [ $# -eq 0 ]; then
-    exec "$VSCODE_DIR/scripts/code.sh" --agents --disable-workspace-trust
+    exec "$VSCODE_DIR/scripts/code.sh" --agents --disable-workspace-trust "${EXTRA_ARGS[@]}"
 else
-    exec "$VSCODE_DIR/scripts/code.sh" "$@"
+    exec "$VSCODE_DIR/scripts/code.sh" "$@" "${EXTRA_ARGS[@]}"
 fi
