@@ -1,6 +1,7 @@
 # Ensure sqlite3 native binary for Continue (avoids GitHub timeout in prepackage)
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
+. "$Root\scripts\vs-dev-env.ps1"
 $Target = if ($env:CONTINUE_VSCODE_TARGET) { $env:CONTINUE_VSCODE_TARGET } else { "win32-x64" }
 $GitHubPath = "TryGhost/node-sqlite3/releases/download/v5.1.7/sqlite3-v5.1.7-napi-v6-$Target.tar.gz"
 
@@ -64,7 +65,7 @@ function Prepare-Sqlite([string]$SqliteDir) {
     }
 
     Write-Host "Download failed -- building sqlite3 from source (needs VS C++)..." -ForegroundColor Yellow
-    $env:npm_config_msvs_version = "2026"
+    $env:npm_config_msvs_version = Get-VsMsvsVersion
     Push-Location $SqliteDir
     npx --yes node-gyp@12 rebuild
     $buildOk = ($LASTEXITCODE -eq 0) -and (Test-SqliteReady $SqliteDir)

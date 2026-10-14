@@ -152,7 +152,7 @@ if ($env:SKIP_VSCODE_BUILD -ne "1") {
     Push-Location $VsCodeDir
     $env:NODE_OPTIONS = "--experimental-strip-types"
     $env:VSCODE_SKIP_NODE_VERSION_CHECK = "1"
-    $env:npm_config_msvs_version = "2026"
+    $env:npm_config_msvs_version = Get-VsMsvsVersion
     $env:npm_config_node_gyp = (Join-Path $Root "scripts\node-gyp-win.js")
     $env:MOBIUS_NODE_GYP_BIN = (Join-Path $VsCodeDir "build\npm\gyp\node_modules\node-gyp\bin\node-gyp.js")
     # Mobius ships Continue, not GitHub Copilot -- skip copilot extension build by default

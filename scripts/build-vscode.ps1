@@ -40,7 +40,7 @@ Push-Location $VsCodeDir
 # VS Code 1.126 runs .ts scripts via Node; Node 22 needs strip-types (24.15 not in nvm-windows yet)
 $env:NODE_OPTIONS = "--experimental-strip-types"
 $env:VSCODE_SKIP_NODE_VERSION_CHECK = "1"
-$env:npm_config_msvs_version = "2026"
+$env:npm_config_msvs_version = Get-VsMsvsVersion
 $env:npm_config_node_gyp = (Join-Path $Root "scripts\node-gyp-win.js")
 $env:MOBIUS_NODE_GYP_BIN = (Join-Path $VsCodeDir "build\npm\gyp\node_modules\node-gyp\bin\node-gyp.js")
 # Also disable Spectre via Directory.Build.* for direct MSBuild invocations

@@ -66,7 +66,28 @@ function Import-VsDevEnvironment {
     # vcvars replaces PATH and often drops Node -- put it back
     Ensure-NodeOnPath -PreferredDir $nodeDirBefore | Out-Null
     Add-SignToolToPath
+    $env:npm_config_msvs_version = Get-VsMsvsVersion
     return $true
+}
+
+function Get-VsMsvsVersion {
+    $vsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    if (Test-Path $vsWhere) {
+        $ver = & $vsWhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationVersion 2>$null
+        if (-not $ver) {
+            $ver = & $vsWhere -latest -products * -requires Microsoft.VisualStudio.Workload.VCTools -property installationVersion 2>$null
+        }
+        if ($ver) {
+            $major = 0
+            if ([int]::TryParse($ver.Trim().Split('.')[0], [ref]$major)) {
+                if ($major -ge 18) { return "2026" }
+                if ($major -eq 17) { return "2022" }
+                if ($major -eq 16) { return "2019" }
+                if ($major -eq 15) { return "2017" }
+            }
+        }
+    }
+    return "2022"
 }
 
 function Add-SignToolToPath {
