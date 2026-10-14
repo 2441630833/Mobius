@@ -83,14 +83,14 @@ function Copy-GodotEngine {
     param([string]$DestRoot)
     $dest = Join-Path $DestRoot "tools\godot"
     if (-not (Test-Path -LiteralPath $SourceGodotExe)) {
-        Write-Host "[INFO] tools/godot/godot.exe not in repo — engine not staged under $DestRoot" -ForegroundColor DarkGray
+        Write-Host "[INFO] tools/godot/godot.exe not in repo -- engine not staged under $DestRoot" -ForegroundColor DarkGray
         Write-Info "Run: npm run godot:setup -- -Install"
         return $false
     }
     New-Item -ItemType Directory -Force -Path $dest | Out-Null
     Get-ChildItem -LiteralPath $dest -Filter "*.zip" -ErrorAction SilentlyContinue | ForEach-Object {
         try { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction Stop }
-        catch { Write-Host "[WARN] Could not remove leftover $($_.Name) (in use) — continuing" -ForegroundColor Yellow }
+        catch { Write-Host "[WARN] Could not remove leftover $($_.Name) (in use) -- continuing" -ForegroundColor Yellow }
     }
     robocopy $SourceGodotTools $dest /E /XF "*.zip" /NFL /NDL /NJH /NJS /NP | Out-Null
     if ($LASTEXITCODE -ge 8) { throw "robocopy failed for tools/godot -> $dest (exit $LASTEXITCODE)" }
@@ -168,5 +168,5 @@ $sizeMb = [math]::Round(
 )
 Write-Host "[ OK ] Godot payload staged ($sizeMb MB under resources/mobius-godot)" -ForegroundColor Green
 if (-not $engineAtRoot) {
-    Write-Info "Godot engine missing in repo — users run: npm run godot:setup -- -Install"
+    Write-Info "Godot engine missing in repo -- users run: npm run godot:setup -- -Install"
 }

@@ -66,7 +66,7 @@ function Get-GodotZip([string]$url, [string]$archive) {
     $len = (Get-Item -LiteralPath $archive).Length
     if ($len -lt $MinZipBytes) {
         Remove-Item -LiteralPath $archive -Force -ErrorAction SilentlyContinue
-        throw "Downloaded zip is too small ($([math]::Round($len / 1MB, 1)) MB) — likely truncated. Retry with curl.exe available, or download manually from $url"
+        throw "Downloaded zip is too small ($([math]::Round($len / 1MB, 1)) MB) -- likely truncated. Retry with curl.exe available, or download manually from $url"
     }
     Write-Host "  zip OK ($([math]::Round($len / 1MB, 1)) MB)" -ForegroundColor DarkGray
 }
@@ -101,7 +101,7 @@ function Install-Godot {
     Remove-Item -LiteralPath $zip -Force -ErrorAction SilentlyContinue
     if (-not (Test-GodotExe $GodotExe)) {
         $len = if (Test-Path -LiteralPath $GodotExe) { (Get-Item -LiteralPath $GodotExe).Length } else { 0 }
-        throw "Installed godot.exe is too small ($len bytes) — install incomplete"
+        throw "Installed godot.exe is too small ($len bytes) -- install incomplete"
     }
     Write-Host "Installed: $GodotExe ($([math]::Round((Get-Item $GodotExe).Length / 1MB, 1)) MB)" -ForegroundColor Green
 }

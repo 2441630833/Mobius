@@ -10,13 +10,13 @@ function Copy-GodotEngine {
     param([string]$DestRoot)
     $dest = Join-Path $DestRoot "tools\godot"
     if (-not (Test-Path -LiteralPath $SourceGodotExe)) {
-        Write-Host "[WARN] Repo missing $SourceGodotExe — engine not copied to $DestRoot" -ForegroundColor Yellow
+        Write-Host "[WARN] Repo missing $SourceGodotExe -- engine not copied to $DestRoot" -ForegroundColor Yellow
         return $false
     }
     New-Item -ItemType Directory -Force -Path $dest | Out-Null
     Get-ChildItem -LiteralPath $dest -Filter "*.zip" -ErrorAction SilentlyContinue | ForEach-Object {
         try { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction Stop }
-        catch { Write-Host "[WARN] Could not remove leftover $($_.Name) (in use) — continuing" -ForegroundColor Yellow }
+        catch { Write-Host "[WARN] Could not remove leftover $($_.Name) (in use) -- continuing" -ForegroundColor Yellow }
     }
     robocopy $SourceGodotTools $dest /E /XF "*.zip" /NFL /NDL /NJH /NJS /NC /NS /NP | Out-Null
     if ($LASTEXITCODE -ge 8) { throw "robocopy tools/godot failed for $DestRoot" }
