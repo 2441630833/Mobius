@@ -215,23 +215,30 @@ body.menu-open {
 
 .lang-switch-btn {
   height: clamp(40px, 4.8vw, 44px);
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  color: #d1d5db;
+  background: #28282a;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  color: #ffffff;
+  box-shadow: var(--nav-shadow);
   border-radius: 999px;
   padding: 0 14px;
   font-family: var(--font-sans);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   white-space: nowrap;
 }
 
 .lang-switch-btn:hover {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: #3f3f46;
+  border-color: #ffffff;
   color: #ffffff;
+}
+
+.lang-switch-btn:focus-visible,
+.mobile-lang-btn:focus-visible {
+  outline: 3px solid #38bdf8;
+  outline-offset: 3px;
 }
 
 .github-btn {
@@ -500,23 +507,6 @@ body.menu-open {
 .light-green {
   background: #27c93f;
   border: 0.5px solid rgba(26, 171, 42, 0.5);
-}
-
-/* Centered Title */
-.terminal-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-sans);
-  font-size: 12.5px;
-  font-weight: 500;
-  color: #a1a1aa;
-  user-select: none;
-}
-
-.term-icon {
-  font-size: 11px;
-  color: #71717a;
 }
 
 /* macOS / Windows / Linux Tab Switcher */
@@ -1113,13 +1103,6 @@ body.menu-open {
     height: auto;
     padding: 8px 10px;
     gap: 6px;
-  }
-
-  .terminal-title {
-    order: 3;
-    width: 100%;
-    justify-content: center;
-    font-size: 11px;
   }
 
   .terminal-statusbar {

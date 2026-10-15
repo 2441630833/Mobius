@@ -102,21 +102,18 @@ document.addEventListener("DOMContentLoaded", () => {
   // 2. Authentic macOS Terminal Tab Switcher
   const terminalProfiles = {
     mac: {
-      title: "mobius — -zsh — 80×24",
       login: "Last login: on ttys001 ~ Terminal",
       promptHtml: '<span class="prompt-host">mobius@macbook</span>:<span class="prompt-dir">~</span><span class="prompt-char">%</span>',
       cmd: "curl -fsSL https://raw.githubusercontent.com/2441630833/Mobius/main/scripts/install-mac.sh | bash",
       showMacGuide: true
     },
     win: {
-      title: "PowerShell 7.4.5 — 80×24",
       login: "Windows PowerShell · Copyright (C) Microsoft Corporation",
       promptHtml: '<span class="prompt-host">PS</span> <span class="prompt-dir">C:\\Users\\Mobius</span><span class="prompt-char">&gt;</span>',
       cmd: "irm https://raw.githubusercontent.com/2441630833/Mobius/main/scripts/install-win.ps1 | iex",
       showMacGuide: false
     },
     linux: {
-      title: "mobius@ubuntu: ~ — bash — 80×24",
       login: "Welcome to Ubuntu 24.04 LTS (GNU/Linux x86_64)",
       promptHtml: '<span class="prompt-host">mobius@ubuntu</span>:<span class="prompt-dir">~</span><span class="prompt-char">$</span>',
       cmd: "curl -fsSL https://raw.githubusercontent.com/2441630833/Mobius/main/scripts/install-linux.sh | bash",
@@ -127,7 +124,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const tabs = document.querySelectorAll(".term-tab");
   const cmdEl = document.getElementById("installCmd");
   const promptEl = document.getElementById("installPrompt");
-  const titleTextEl = document.getElementById("terminalTitleText");
   const loginLineEl = document.getElementById("termLoginLine");
   const macGuideBtn = document.getElementById("openMacGuide");
 
@@ -145,7 +141,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (cmdEl) cmdEl.textContent = profile.cmd;
       if (promptEl) promptEl.innerHTML = profile.promptHtml;
-      if (titleTextEl) titleTextEl.textContent = profile.title;
       if (loginLineEl) loginLineEl.textContent = profile.login;
       if (macGuideBtn) {
         macGuideBtn.style.display = profile.showMacGuide ? "inline-flex" : "none";
