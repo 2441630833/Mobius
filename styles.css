@@ -550,13 +550,6 @@ body.menu-open {
   background: rgba(12, 12, 15, 0.85);
 }
 
-.terminal-header-line {
-  font-size: 11.5px;
-  color: #64748b;
-  margin-bottom: 8px;
-  user-select: none;
-}
-
 .terminal-command-line {
   display: flex;
   align-items: center;

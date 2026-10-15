@@ -102,19 +102,16 @@ document.addEventListener("DOMContentLoaded", () => {
   // 2. Authentic macOS Terminal Tab Switcher
   const terminalProfiles = {
     mac: {
-      login: "Last login: on ttys001 ~ Terminal",
       promptHtml: '<span class="prompt-host">mobius@macbook</span>:<span class="prompt-dir">~</span><span class="prompt-char">%</span>',
       cmd: "curl -fsSL https://raw.githubusercontent.com/2441630833/Mobius/main/scripts/install-mac.sh | bash",
       showMacGuide: true
     },
     win: {
-      login: "Windows PowerShell · Copyright (C) Microsoft Corporation",
       promptHtml: '<span class="prompt-host">PS</span> <span class="prompt-dir">C:\\Users\\Mobius</span><span class="prompt-char">&gt;</span>',
       cmd: "irm https://raw.githubusercontent.com/2441630833/Mobius/main/scripts/install-win.ps1 | iex",
       showMacGuide: false
     },
     linux: {
-      login: "Welcome to Ubuntu 24.04 LTS (GNU/Linux x86_64)",
       promptHtml: '<span class="prompt-host">mobius@ubuntu</span>:<span class="prompt-dir">~</span><span class="prompt-char">$</span>',
       cmd: "curl -fsSL https://raw.githubusercontent.com/2441630833/Mobius/main/scripts/install-linux.sh | bash",
       showMacGuide: false
@@ -124,7 +121,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const tabs = document.querySelectorAll(".term-tab");
   const cmdEl = document.getElementById("installCmd");
   const promptEl = document.getElementById("installPrompt");
-  const loginLineEl = document.getElementById("termLoginLine");
   const macGuideBtn = document.getElementById("openMacGuide");
 
   tabs.forEach((tab) => {
@@ -141,7 +137,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (cmdEl) cmdEl.textContent = profile.cmd;
       if (promptEl) promptEl.innerHTML = profile.promptHtml;
-      if (loginLineEl) loginLineEl.textContent = profile.login;
       if (macGuideBtn) {
         macGuideBtn.style.display = profile.showMacGuide ? "inline-flex" : "none";
       }
