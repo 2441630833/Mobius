@@ -203,9 +203,21 @@ if ($isInstalled) {
 
     $runningProcs = Get-Process Mobius -ErrorAction SilentlyContinue
     if ($runningProcs) {
-        Write-Host "检测到 Mobius 正在运行，正在关闭以防止安装文件锁定..." -ForegroundColor Yellow
-        $runningProcs | Stop-Process -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 1
+        Write-Host "检测到 Mobius 正在运行，正在请求安全保存工作区并退出..." -ForegroundColor Yellow
+        foreach ($p in $runningProcs) {
+            try { $null = $p.CloseMainWindow() } catch {}
+        }
+        $waitCount = 0
+        while ((Get-Process Mobius -ErrorAction SilentlyContinue) -and ($waitCount -lt 10)) {
+            Start-Sleep -Milliseconds 500
+            $waitCount++
+        }
+        $stillRunning = Get-Process Mobius -ErrorAction SilentlyContinue
+        if ($stillRunning) {
+            Write-Host "清理残留后台进程..." -ForegroundColor DarkGray
+            $stillRunning | Stop-Process -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 1
+        }
     }
 }
 
@@ -215,9 +227,10 @@ Write-Host "Downloading Mobius installer ($latestTag)..." -ForegroundColor Cyan
 Invoke-WebRequest -Uri $downloadUrl -OutFile $tempInstaller -UseBasicParsing
 
 # 7. Run Installer
-Write-Host "Running Mobius Setup..." -ForegroundColor Cyan
-# Silent user install by default (/SILENT /SP-)
-$process = Start-Process -FilePath $tempInstaller -ArgumentList "/SILENT /SP-" -PassThru -Wait
+Write-Host "Running Mobius Setup (正在静默安装，请稍候)..." -ForegroundColor Cyan
+# Silent user install without launching app inside installer (/MERGETASKS="!runcode")
+# This prevents Mobius from inheriting installer handles and blocking the PowerShell process
+$process = Start-Process -FilePath $tempInstaller -ArgumentList '/SILENT /SP- /MERGETASKS="!runcode"' -PassThru -Wait
 
 # 8. Record tag file into installation directory
 $targetDir = if ($installedPath) { $installedPath } else { Join-Path $env:LOCALAPPDATA "Programs\Mobius" }
@@ -228,6 +241,12 @@ if (Test-Path $targetDir) {
 # 9. Clean up
 Remove-Item -Path $tempInstaller -Force -ErrorAction SilentlyContinue
 
+# 10. Launch newly updated Mobius independently
+$mobiusExe = Join-Path $targetDir "Mobius.exe"
+if (Test-Path $mobiusExe) {
+    Start-Process -FilePath $mobiusExe
+}
+
 if ($isInstalled) {
     Write-Host "`n[Success] Mobius 已成功同步更新至最新版本 ($latestTag)！" -ForegroundColor Green
     Write-Host "您的扩展插件、用户配置与工作区数据均完整保留。" -ForegroundColor DarkGray
@@ -236,3 +255,9 @@ if ($isInstalled) {
     Write-Host "You can find Mobius in your Start Menu and Desktop." -ForegroundColor DarkGray
 }
 Write-Host "Enjoy shipping with Mobius!`n" -ForegroundColor Cyan
+
+if ($env:MOBIUS_AUTO_CLOSE -eq "1") {
+    Write-Host "MOBIUS_AUTO_CLOSE=1: 终端将在 2 秒后自动关闭..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 2
+    exit
+}
