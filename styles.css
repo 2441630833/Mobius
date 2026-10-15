@@ -272,7 +272,7 @@ body.menu-open {
   justify-content: center;
   text-align: center;
   width: 100%;
-  max-width: 840px;
+  max-width: 960px;
   margin: 0 auto;
 }
 
@@ -373,7 +373,7 @@ body.menu-open {
 /* 3 Desktop Downloads Section */
 .downloads-section {
   width: 100%;
-  max-width: 660px;
+  max-width: 920px;
   margin: 0 auto clamp(10px, 1.6vh, 16px);
 }
 
@@ -448,7 +448,7 @@ body.menu-open {
    ========================================================================== */
 .macos-terminal {
   width: 100%;
-  max-width: 660px;
+  max-width: 920px;
   margin: 0 auto;
   background: rgba(18, 18, 22, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.18);
@@ -604,17 +604,32 @@ body.menu-open {
   flex: 1;
   display: flex;
   align-items: center;
-  overflow: hidden;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.terminal-code-wrapper::-webkit-scrollbar {
+  height: 3px;
+}
+
+.terminal-code-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.terminal-code-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
 }
 
 .terminal-cmd {
   font-family: var(--font-mono);
-  font-size: clamp(12px, 1.25vw, 13.5px);
+  font-size: clamp(12px, 1.15vw, 13px);
   color: #f8fafc;
   font-weight: 500;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   user-select: all;
 }
 
@@ -1120,6 +1135,30 @@ body.menu-open {
     width: 100%;
     justify-content: center;
     font-size: 11px;
+  }
+
+  .terminal-command-line {
+    flex-wrap: wrap;
+    row-gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .terminal-prompt {
+    font-size: 12px;
+  }
+
+  .terminal-copy-btn {
+    margin-left: auto;
+  }
+
+  .terminal-code-wrapper {
+    flex-basis: 100%;
+    order: 3;
+    padding-top: 2px;
+  }
+
+  .terminal-cmd {
+    font-size: 11.5px;
   }
 
   .terminal-statusbar {
