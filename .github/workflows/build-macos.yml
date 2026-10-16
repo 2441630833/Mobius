@@ -12,6 +12,11 @@ on:
           - all
           - arm64
           - x64
+      release_tag:
+        description: 'Existing release tag to publish to; leave empty for artifacts only'
+        required: false
+        default: ''
+        type: string
   push:
     tags:
       - 'v*'
@@ -69,10 +74,11 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
-      - name: Publish to GitHub Release (on tag)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Publish to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') || (inputs.release_tag != '' && inputs.release_tag != null)
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.release_tag || github.ref_name }}
           files: dist/*
           draft: false
           make_latest: true
@@ -88,7 +94,7 @@ jobs:
       github.event_name == 'push' ||
       inputs.arch == 'all' ||
       inputs.arch == 'x64'
-    runs-on: macos-13
+    runs-on: macos-15-intel
     timeout-minutes: 90
     permissions:
       contents: write
@@ -131,10 +137,11 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
-      - name: Publish to GitHub Release (on tag)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Publish to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') || (inputs.release_tag != '' && inputs.release_tag != null)
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.release_tag || github.ref_name }}
           files: dist/*
           draft: false
           make_latest: true
