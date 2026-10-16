@@ -13,6 +13,49 @@ set -e
 
 REPO="2441630833/Mobius"
 APP_NAME="Mobius"
+APP_ID="com.mobius.ide"
+LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+
+bundle_id() {
+    defaults read "$1/Contents/Info.plist" CFBundleIdentifier 2>/dev/null || true
+}
+
+valid_app() {
+    local executable
+    [ ! -L "$1" ] && [ "$(bundle_id "$1")" = "$APP_ID" ] || return 1
+    executable=$(defaults read "$1/Contents/Info.plist" CFBundleExecutable 2>/dev/null) || return 1
+    [ -n "$executable" ] && [ -x "$1/Contents/MacOS/$executable" ]
+}
+
+refresh_registration() {
+    if [ -x "$LSREGISTER" ]; then
+        "$LSREGISTER" -f "$INSTALLED_APP" || return 1
+    fi
+}
+
+cleanup_duplicates() {
+    local directory candidate
+    # Only remove copies with our exact identity, never apps selected by name.
+    valid_app "$INSTALLED_APP" || return 1
+    for directory in "$TARGET_DIR" "$HOME/Applications"; do
+        [ -d "$directory" ] && [ ! -L "$directory" ] || continue
+        for candidate in "$directory"/*.app; do
+            [ -d "$candidate" ] && [ ! -L "$candidate" ] || continue
+            [ "$candidate" != "$INSTALLED_APP" ] || continue
+            [ "$(bundle_id "$candidate")" = "$APP_ID" ] || continue
+            echo "Removing previous Mobius copy: $candidate"
+            if [ -x "$LSREGISTER" ]; then
+                "$LSREGISTER" -u "$candidate" || true
+            fi
+            if [ "$directory" = "$TARGET_DIR" ]; then
+                $USE_SUDO rm -rf -- "$candidate"
+            else
+                rm -rf -- "$candidate"
+            fi
+        done
+    done
+    refresh_registration
+}
 
 # Colors
 GREEN='\033[0;32m'
@@ -118,6 +161,8 @@ if [ "$IS_INSTALLED" = false ]; then
     NEEDS_UPDATE=true
 elif [ "$FORCE" = true ]; then
     NEEDS_UPDATE=true
+elif ! valid_app "$INSTALLED_APP"; then
+    NEEDS_UPDATE=true
 else
     if [ -n "$INSTALLED_TAG" ] && [ "$INSTALLED_TAG" = "$LATEST_TAG" ]; then
         NEEDS_UPDATE=false
@@ -136,6 +181,7 @@ if [ "$CHECK_ONLY" = true ]; then
 fi
 
 if [ "$NEEDS_UPDATE" = false ]; then
+    cleanup_duplicates
     echo -e "\n${GREEN}${BOLD}✓ 本地 Mobius 已是最新版本 (${LATEST_TAG})！无需重复下载。${NC}"
     echo -e "  - 安装路径: ${INSTALLED_APP}"
     echo -e "  - 启动命令: ${CYAN}open /Applications/Mobius.app${NC}"
@@ -161,13 +207,32 @@ fi
 
 # 6. Download Asset
 TEMP_DIR="$(mktemp -d -t mobius-install-XXXXXX)"
-trap 'rm -rf "$TEMP_DIR"' EXIT
+MOUNT_POINT=""
+STAGE_DIR=""
+cleanup_install() {
+    local result=$?
+    if [ -n "$MOUNT_POINT" ]; then
+        hdiutil detach "$MOUNT_POINT" -quiet || true
+    fi
+    if [ -n "$STAGE_DIR" ]; then
+        if [ -d "$STAGE_DIR/previous.app" ] && [ ! -e "$INSTALLED_APP" ]; then
+            if ! $USE_SUDO mv "$STAGE_DIR/previous.app" "$INSTALLED_APP"; then
+                echo "Could not restore previous app; preserved at $STAGE_DIR/previous.app" >&2
+                return 1
+            fi
+        fi
+        $USE_SUDO rm -rf -- "$STAGE_DIR"
+    fi
+    rm -rf -- "$TEMP_DIR"
+    return "$result"
+}
+trap cleanup_install EXIT
 
 FILE_NAME="$(basename "$DOWNLOAD_URL")"
 DEST_FILE="$TEMP_DIR/$FILE_NAME"
 
 echo -e "\n${CYAN}→${NC} Downloading ${BOLD}$FILE_NAME${NC} (${LATEST_TAG})..."
-curl -# -L -o "$DEST_FILE" "$DOWNLOAD_URL"
+curl -f --retry 2 -# -L -o "$DEST_FILE" "$DOWNLOAD_URL"
 
 # 7. Extract and Install
 echo -e "${CYAN}→${NC} Installing to ${BOLD}${TARGET_DIR}/${APP_NAME}.app${NC}..."
@@ -177,32 +242,43 @@ if [[ "$DEST_FILE" == *.dmg ]]; then
     mkdir -p "$MOUNT_POINT"
     hdiutil attach "$DEST_FILE" -mountpoint "$MOUNT_POINT" -nobrowse -quiet
     
-    if [ -d "$MOUNT_POINT/${APP_NAME}.app" ]; then
-        $USE_SUDO rm -rf "${TARGET_DIR}/${APP_NAME}.app"
-        $USE_SUDO cp -R "$MOUNT_POINT/${APP_NAME}.app" "${TARGET_DIR}/"
-    else
-        FOUND_APP=$(find "$MOUNT_POINT" -maxdepth 1 -name "*.app" | head -n 1)
-        if [ -n "$FOUND_APP" ]; then
-            $USE_SUDO rm -rf "${TARGET_DIR}/${APP_NAME}.app"
-            $USE_SUDO cp -R "$FOUND_APP" "${TARGET_DIR}/${APP_NAME}.app"
-        else
-            echo -e "${RED}✗ Failed to find application in DMG.${NC}"
-            hdiutil detach "$MOUNT_POINT" -quiet || true
-            exit 1
-        fi
-    fi
-    hdiutil detach "$MOUNT_POINT" -quiet || true
+    SOURCE_DIR="$MOUNT_POINT"
 elif [[ "$DEST_FILE" == *.zip ]]; then
     unzip -q -o "$DEST_FILE" -d "$TEMP_DIR/unpacked"
-    FOUND_APP=$(find "$TEMP_DIR/unpacked" -maxdepth 2 -name "*.app" | head -n 1)
-    if [ -n "$FOUND_APP" ]; then
-        $USE_SUDO rm -rf "${TARGET_DIR}/${APP_NAME}.app"
-        $USE_SUDO cp -R "$FOUND_APP" "${TARGET_DIR}/${APP_NAME}.app"
-    else
-        echo -e "${RED}✗ Failed to find application in ZIP.${NC}"
+    SOURCE_DIR="$TEMP_DIR/unpacked"
+else
+    echo "Unsupported release asset: $FILE_NAME" >&2
+    exit 1
+fi
+
+# Select a verified Mobius bundle, even when the archive uses a different name.
+FOUND_APP=""
+while IFS= read -r -d '' candidate; do
+    if valid_app "$candidate"; then
+        FOUND_APP="$candidate"
+        break
+    fi
+done < <(find "$SOURCE_DIR" -maxdepth 2 -type d -name '*.app' -print0)
+if [ -z "$FOUND_APP" ]; then
+    echo "Failed to find a valid Mobius application in the release." >&2
+    exit 1
+fi
+if [ -e "$INSTALLED_APP" ] || [ -L "$INSTALLED_APP" ]; then
+    if [ -L "$INSTALLED_APP" ] || [ "$(bundle_id "$INSTALLED_APP")" != "$APP_ID" ]; then
+        echo "Refusing to replace an unrecognized application: $INSTALLED_APP" >&2
         exit 1
     fi
 fi
+# Stage on the destination filesystem before moving the old app out of the way.
+STAGE_DIR=$($USE_SUDO mktemp -d "$TARGET_DIR/.mobius-install-XXXXXX")
+# sudo-created mktemp directories are otherwise unreadable by defaults below.
+$USE_SUDO chmod 755 "$STAGE_DIR"
+$USE_SUDO cp -R "$FOUND_APP" "$STAGE_DIR/Mobius.app"
+valid_app "$STAGE_DIR/Mobius.app" || exit 1
+if [ -d "$INSTALLED_APP" ]; then
+    $USE_SUDO mv "$INSTALLED_APP" "$STAGE_DIR/previous.app"
+fi
+$USE_SUDO mv "$STAGE_DIR/Mobius.app" "$INSTALLED_APP"
 
 # 8. Record Installed Tag
 echo "$LATEST_TAG" | $USE_SUDO tee "${TARGET_DIR}/${APP_NAME}.app/Contents/.mobius-installed-tag" >/dev/null 2>&1 || true
@@ -229,6 +305,8 @@ killall Dock >/dev/null 2>&1 || true
 if command -v codesign >/dev/null 2>&1; then
     $USE_SUDO codesign --force --deep --sign - "${TARGET_DIR}/${APP_NAME}.app" 2>/dev/null || true
 fi
+
+cleanup_duplicates
 
 if [ "$IS_INSTALLED" = true ]; then
     echo -e "\n${GREEN}${BOLD}[Success] Mobius 已成功同步更新至最新版本 (${LATEST_TAG})！${NC}"
