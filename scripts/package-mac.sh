@@ -171,6 +171,13 @@ else
 fi
 
 # =========================================================================
+# Verify the actual signed app before creating any distributable archives.
+# This also covers an existing profile whose previous window was Editor.
+# =========================================================================
+APP_EXECUTABLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP_PATH/Contents/Info.plist")
+node "$SCRIPT_DIR/verify-agent-startup.mjs" "$APP_PATH/Contents/MacOS/$APP_EXECUTABLE"
+
+# =========================================================================
 # Step 2: Build macOS .dmg Disk Image (Drag-and-Drop installer)
 # =========================================================================
 echo -e "\n${CYAN}--- Step 2: Creating macOS .dmg Disk Image ---${NC}"
