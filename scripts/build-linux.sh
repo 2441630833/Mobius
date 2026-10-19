@@ -141,6 +141,12 @@ if [ ! -d "node_modules" ] || [ ! -f "node_modules/gulp/bin/gulp.js" ]; then
     node build/npm/postinstall.ts
 fi
 
+# npm install --ignore-scripts skips node-pty's native install/postinstall.
+# Cached node_modules can also contain a binary for another architecture or ABI.
+# Rebuild with this checkout's Electron target from .npmrc before packaging.
+echo "Rebuilding terminal native dependency for Electron linux-$ARCH..."
+npm rebuild node-pty --build-from-source --arch="$ARCH"
+
 echo "Compiling VS Code client..."
 npm run compile-client
 

@@ -82,6 +82,11 @@ echo -e "Application: ${GREEN}$NAME_LONG${NC} ($APP_NAME)"
 echo -e "Version:     ${GREEN}$VERSION${NC}"
 echo -e "Arch:        ${GREEN}$DEB_ARCH${NC}"
 
+# Fail before shipping if the actual target runtime cannot load node-pty or
+# exchange data with a shell. Also covers --skip-build and cached client trees.
+echo "Verifying packaged terminal on linux-$ARCH..."
+ELECTRON_RUN_AS_NODE=1 "$CLIENT_DIR/$APP_NAME" "$SCRIPT_DIR/verify-linux-terminal.cjs" "$CLIENT_DIR" "$ARCH"
+
 # =========================================================================
 # Step 2: Build Debian .deb Package
 # =========================================================================
