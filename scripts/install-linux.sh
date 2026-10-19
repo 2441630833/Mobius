@@ -264,6 +264,55 @@ else
         ln -sf "$INSTALL_DIR/bin/mobius" /usr/local/bin/mobius
         echo "$LATEST_TAG" | tee "$INSTALL_DIR/.mobius-installed-tag" >/dev/null 2>&1 || true
     fi
+
+    # Ensure desktop file exists for tarball
+    if [ ! -f /usr/share/applications/mobius.desktop ]; then
+        DESKTOP_CONTENT="[Desktop Entry]\nName=Mobius\nComment=Mobius Agentic Development Environment\nExec=/usr/local/bin/mobius %F\nIcon=mobius\nType=Application\nStartupNotify=true\nStartupWMClass=mobius\nCategories=Development;IDE;\nMimeType=text/plain;inode/directory;"
+        if [ "$EUID" -ne 0 ]; then
+            echo -e "$DESKTOP_CONTENT" | sudo tee /usr/share/applications/mobius.desktop >/dev/null 2>&1 || true
+        else
+            echo -e "$DESKTOP_CONTENT" | tee /usr/share/applications/mobius.desktop >/dev/null 2>&1 || true
+        fi
+    fi
+fi
+
+# 7. Setup Desktop Shortcut if Desktop directory exists
+COPIED_TO_DESKTOP=""
+TARGET_USER="${SUDO_USER:-$USER}"
+if [ -n "$TARGET_USER" ]; then
+    TARGET_HOME=$(getent passwd "$TARGET_USER" 2>/dev/null | cut -d: -f6)
+fi
+TARGET_HOME="${TARGET_HOME:-$HOME}"
+
+DESKTOP_DIR=""
+for candidate in "$TARGET_HOME/Desktop" "$TARGET_HOME/桌面"; do
+    if [ -d "$candidate" ]; then
+        DESKTOP_DIR="$candidate"
+        break
+    fi
+done
+
+if [ -n "$DESKTOP_DIR" ] && [ -f "/usr/share/applications/mobius.desktop" ]; then
+    DESKTOP_FILE="$DESKTOP_DIR/mobius.desktop"
+    if [ "$EUID" -ne 0 ]; then
+        cp -f "/usr/share/applications/mobius.desktop" "$DESKTOP_FILE" 2>/dev/null || true
+        chmod +x "$DESKTOP_FILE" 2>/dev/null || true
+        if command -v gio >/dev/null 2>&1; then
+            gio set "$DESKTOP_FILE" metadata::trusted true 2>/dev/null || true
+        fi
+    else
+        cp -f "/usr/share/applications/mobius.desktop" "$DESKTOP_FILE" 2>/dev/null || true
+        chmod +x "$DESKTOP_FILE" 2>/dev/null || true
+        if [ -n "$SUDO_USER" ]; then
+            chown "$SUDO_USER:$SUDO_USER" "$DESKTOP_FILE" 2>/dev/null || true
+            if command -v gio >/dev/null 2>&1; then
+                sudo -u "$SUDO_USER" gio set "$DESKTOP_FILE" metadata::trusted true 2>/dev/null || true
+            fi
+        fi
+    fi
+    if [ -f "$DESKTOP_FILE" ]; then
+        COPIED_TO_DESKTOP="$DESKTOP_FILE"
+    fi
 fi
 
 if [ "$IS_INSTALLED" = true ]; then
@@ -273,4 +322,15 @@ else
     echo -e "\n${GREEN}${BOLD}[Success] Mobius has been installed successfully (${LATEST_TAG})!${NC}"
 fi
 
-echo -e "You can launch it anytime by running: ${CYAN}mobius${NC}\n"
+echo -e "\n${GREEN}${BOLD}=== 启动方式 / How to Launch ===${NC}"
+echo -e "1. ${BOLD}终端运行${NC}: 输入 ${CYAN}mobius${NC} 回车即可启动图形界面 (或 ${CYAN}mobius . &${NC} 在后台打开当前目录)"
+echo -e "2. ${BOLD}系统应用菜单${NC}: 按键盘 ${CYAN}Super / Win${NC} 键，搜索 ${CYAN}Mobius${NC} 点击图标打开（可右键选择「添加到收藏夹」固定至 Dock 侧边栏）"
+if [ -n "$COPIED_TO_DESKTOP" ]; then
+    echo -e "3. ${BOLD}桌面图标${NC}: 已自动放置快捷图标至桌面 (${CYAN}$COPIED_TO_DESKTOP${NC})"
+    echo -e "   - 若双击提示未受信任，请在桌面上右键该图标点击「${YELLOW}允许启动 / Allow Launching${NC}」即可正常双击打开"
+else
+    echo -e "3. ${BOLD}桌面图标${NC}: 如需在桌面背景放置图标，可运行:"
+    echo -e "   ${CYAN}cp /usr/share/applications/mobius.desktop ~/Desktop/ && chmod +x ~/Desktop/mobius.desktop${NC}"
+    echo -e "   (然后在桌面上右键点击图标选择「${YELLOW}允许启动 / Allow Launching${NC}」)"
+fi
+echo ""
