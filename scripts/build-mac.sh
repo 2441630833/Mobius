@@ -169,6 +169,13 @@ if ! node build/npm/postinstall.ts; then
     done
 fi
 
+# Rebuild critical native dependencies for Electron darwin-$ARCH:
+# - node-pty: terminal shell execution
+# - @vscode/sqlite3: state, configuration, and workspace storage persistence
+# - native-keymap: keyboard layout detection
+echo "Rebuilding native dependencies for Electron darwin-$ARCH..."
+npm rebuild node-pty @vscode/sqlite3 native-keymap --build-from-source --arch="$ARCH" || true
+
 echo "Compiling VS Code client..."
 npm run compile-client
 
