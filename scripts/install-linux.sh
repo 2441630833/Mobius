@@ -47,20 +47,19 @@ echo -e "\n${CYAN}${BOLD}=== Mobius: Linux Fast Installer & Auto-Updater ===${NC
 # 1. Detect Architecture
 ARCH="$(uname -m)"
 case "$ARCH" in
-    x86_64)
+    x86_64|amd64)
         LINUX_ARCH="amd64"
         TAR_ARCH="x64"
-        echo -e "${GREEN}✓${NC} Detected architecture: x86_64 (${BOLD}x64${NC})"
+        ARCH_DESC="x86_64 (amd64 / x64)"
         ;;
     aarch64|arm64)
         LINUX_ARCH="arm64"
         TAR_ARCH="arm64"
-        echo -e "${GREEN}✓${NC} Detected architecture: AArch64 (${BOLD}arm64${NC})"
+        ARCH_DESC="AArch64 (arm64)"
         ;;
     *)
-        echo -e "${YELLOW}!${NC} Unknown architecture $ARCH, defaulting to x86_64"
-        LINUX_ARCH="amd64"
-        TAR_ARCH="x64"
+        echo -e "${RED}[ERROR] Unsupported architecture: $ARCH. Mobius supports x86_64 and arm64.${NC}"
+        exit 1
         ;;
 esac
 
@@ -68,7 +67,19 @@ esac
 IS_DEB=false
 if command -v dpkg >/dev/null 2>&1 && command -v apt-get >/dev/null 2>&1; then
     IS_DEB=true
-    echo -e "${GREEN}✓${NC} Detected Debian/Ubuntu system (.deb)"
+    DPKG_ARCH=$(dpkg --print-architecture 2>/dev/null || true)
+    if [ "$DPKG_ARCH" = "arm64" ] || [ "$DPKG_ARCH" = "aarch64" ]; then
+        LINUX_ARCH="arm64"
+        TAR_ARCH="arm64"
+        ARCH_DESC="AArch64 (arm64)"
+    elif [ "$DPKG_ARCH" = "amd64" ] || [ "$DPKG_ARCH" = "x86_64" ]; then
+        LINUX_ARCH="amd64"
+        TAR_ARCH="x64"
+        ARCH_DESC="x86_64 (amd64 / x64)"
+    fi
+    echo -e "${GREEN}✓${NC} Detected Debian/Ubuntu system (.deb, arch: ${BOLD}${LINUX_ARCH}${NC})"
+else
+    echo -e "${GREEN}✓${NC} Detected architecture: ${ARCH_DESC}"
 fi
 
 # 3. Detect Existing Installation
@@ -93,24 +104,85 @@ if [ "$IS_INSTALLED" = true ]; then
 fi
 
 # 4. Fetch Latest Release Information
-echo -e "${CYAN}→${NC} Fetching latest release information from GitHub..."
-RELEASE_DATA=$(curl -s -H "User-Agent: Mobius-Installer-Linux" "https://api.github.com/repos/${REPO}/releases" || true)
+echo -e "${CYAN}→${NC} Fetching release information from GitHub..."
 
-LATEST_TAG=$(echo "$RELEASE_DATA" | grep -o '"tag_name": *"[^"]*"' | head -n 1 | cut -d'"' -f4 || true)
-if [ -z "$LATEST_TAG" ]; then
-    LATEST_TAG="v1.0.4"
+# Step 4a: Retrieve latest release metadata from GitHub API or HTTP redirect
+LATEST_RELEASE_JSON=""
+LATEST_TAG=""
+
+if command -v curl >/dev/null 2>&1; then
+    # First try latest release endpoint
+    API_RESPONSE=$(curl -fsSL -H "User-Agent: Mobius-Installer-Linux" "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null || true)
+    if echo "$API_RESPONSE" | grep -q '"tag_name"'; then
+        LATEST_RELEASE_JSON="$API_RESPONSE"
+        LATEST_TAG=$(echo "$API_RESPONSE" | grep -o '"tag_name": *"[^"]*"' | head -n 1 | cut -d'"' -f4 || true)
+    fi
 fi
 
-if [ "$IS_DEB" = true ]; then
-    DOWNLOAD_URL=$(echo "$RELEASE_DATA" | grep -o "https://[^\"]*${LINUX_ARCH}\.deb" | head -n 1 || true)
-    if [ -z "$DOWNLOAD_URL" ]; then
-        DOWNLOAD_URL="https://github.com/${REPO}/releases/download/v1.0.4/mobius_1.126.0_amd64.deb"
+# Fallback: resolve release tag via HTTP redirect header if API is rate-limited or fails
+if [ -z "$LATEST_TAG" ]; then
+    REDIRECT_LOC=$(curl -sSI "https://github.com/${REPO}/releases/latest" 2>/dev/null | grep -i "^location:" | head -n 1 | tr -d '\r\n')
+    if [ -n "$REDIRECT_LOC" ]; then
+        LATEST_TAG=$(echo "$REDIRECT_LOC" | sed -e 's/.*tag\///' | tr -d ' /')
     fi
-else
-    DOWNLOAD_URL=$(echo "$RELEASE_DATA" | grep -o "https://[^\"]*linux-${TAR_ARCH}\.tar\.gz" | head -n 1 || true)
-    if [ -z "$DOWNLOAD_URL" ]; then
-        DOWNLOAD_URL="https://github.com/${REPO}/releases/download/v1.0.4/mobius-1.126.0-linux-x64.tar.gz"
+fi
+
+if [ -z "$LATEST_TAG" ]; then
+    LATEST_TAG="v1.0.6"
+fi
+
+# Step 4b: Find asset URL for the target architecture
+DOWNLOAD_URL=""
+
+# Priority 1: Match from latest release JSON
+if [ -n "$LATEST_RELEASE_JSON" ]; then
+    if [ "$IS_DEB" = true ]; then
+        DOWNLOAD_URL=$(echo "$LATEST_RELEASE_JSON" | grep -o "https://[^\"]*${LINUX_ARCH}\.deb" | head -n 1 || true)
+    else
+        DOWNLOAD_URL=$(echo "$LATEST_RELEASE_JSON" | grep -o "https://[^\"]*linux-${TAR_ARCH}\.tar\.gz" | head -n 1 || true)
     fi
+fi
+
+# Priority 2: Probe direct asset URL for LATEST_TAG if not obtained via API
+if [ -z "$DOWNLOAD_URL" ]; then
+    if [ "$IS_DEB" = true ]; then
+        CANDIDATE_URL="https://github.com/${REPO}/releases/download/${LATEST_TAG}/mobius_1.126.0_${LINUX_ARCH}.deb"
+    else
+        CANDIDATE_URL="https://github.com/${REPO}/releases/download/${LATEST_TAG}/mobius-1.126.0-linux-${TAR_ARCH}.tar.gz"
+    fi
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -I -L "$CANDIDATE_URL" 2>/dev/null || true)
+    if [ "$HTTP_CODE" = "200" ]; then
+        DOWNLOAD_URL="$CANDIDATE_URL"
+    fi
+fi
+
+# Priority 3: Fallback query across all recent releases to locate the newest release containing this arch
+if [ -z "$DOWNLOAD_URL" ]; then
+    ALL_RELEASES=$(curl -fsSL -H "User-Agent: Mobius-Installer-Linux" "https://api.github.com/repos/${REPO}/releases" 2>/dev/null || true)
+    if [ -n "$ALL_RELEASES" ]; then
+        if [ "$IS_DEB" = true ]; then
+            DOWNLOAD_URL=$(echo "$ALL_RELEASES" | grep -o "https://[^\"]*${LINUX_ARCH}\.deb" | head -n 1 || true)
+        else
+            DOWNLOAD_URL=$(echo "$ALL_RELEASES" | grep -o "https://[^\"]*linux-${TAR_ARCH}\.tar\.gz" | head -n 1 || true)
+        fi
+        if [ -n "$DOWNLOAD_URL" ]; then
+            RELEASE_TAG_FROM_URL=$(echo "$DOWNLOAD_URL" | grep -o 'releases/download/[^/]*' | cut -d'/' -f3 || true)
+            if [ -n "$RELEASE_TAG_FROM_URL" ]; then
+                LATEST_TAG="$RELEASE_TAG_FROM_URL"
+            fi
+        fi
+    fi
+fi
+
+# Step 4c: Strict Architecture Safety Check (NEVER cross-install or mismatch)
+if [ -z "$DOWNLOAD_URL" ]; then
+    echo -e "\n${RED}${BOLD}[错误] 未能找到适用于 ${LINUX_ARCH} (${TAR_ARCH}) 架构的安装包！${NC}"
+    echo -e "当前系统检测架构: ${YELLOW}${LINUX_ARCH} (${TAR_ARCH})${NC}"
+    echo -e "GitHub 最新发布版本: ${CYAN}${LATEST_TAG}${NC}"
+    echo -e "原因说明: GitHub Release 尚未包含针对 ${BOLD}${LINUX_ARCH}${NC} 架构的构建文件。"
+    echo -e "请查看 GitHub Releases 页面: ${CYAN}https://github.com/${REPO}/releases${NC}"
+    echo -e "待 GitHub Action 编译完成后即可重新执行本脚本一键安装。"
+    exit 1
 fi
 
 echo -e "${GREEN}✓${NC} Remote Release: ${BOLD}${LATEST_TAG}${NC}"

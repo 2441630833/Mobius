@@ -79,15 +79,25 @@ jobs:
           if-no-files-found: error
 
   # =========================================================================
-  # 2. Linux (Ubuntu / Debian x64) Build
+  # 2. Linux (Ubuntu / Debian x64 & arm64) Build
   # =========================================================================
   build-linux:
-    name: Build Linux (x64)
+    name: Build Linux (${{ matrix.arch }})
     if: |
       github.event_name == 'push' ||
       inputs.platform == 'all' ||
       inputs.platform == 'linux'
-    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            arch: x64
+            label: x86_64
+          - os: ubuntu-24.04-arm
+            arch: arm64
+            label: arm64
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 90
 
     steps:
@@ -132,12 +142,12 @@ jobs:
 
       - name: Build and package Mobius for Ubuntu
         run: |
-          bash scripts/package-linux.sh --arch x64
+          bash scripts/package-linux.sh --arch "${{ matrix.arch }}"
 
       - name: Upload Linux Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: mobius-linux-x64
+          name: mobius-linux-${{ matrix.arch }}
           path: dist/*
           if-no-files-found: error
 
@@ -247,9 +257,21 @@ jobs:
       - name: Consolidate artifacts
         run: |
           mkdir -p release-dist
-          find release-artifacts -type f -exec cp {} release-dist/ \;
+          for artifact in release-artifacts/*; do
+            [ -d "$artifact" ] || continue
+            for file in "$artifact"/*; do
+              [ -f "$file" ] || continue
+              name=$(basename "$file")
+              if [ "$name" = "SHA256SUMS.txt" ]; then
+                name="$(basename "$artifact")-SHA256SUMS.txt"
+              fi
+              cp "$file" "release-dist/$name"
+            done
+          done
+          cd release-dist
+          sha256sum $(find . -maxdepth 1 -type f ! -name "*SHA256SUMS*.txt") > SHA256SUMS.txt || true
           echo "=== Files ready for Release ==="
-          ls -lh release-dist/
+          ls -lh
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

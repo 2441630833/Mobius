@@ -57,7 +57,7 @@ CLIENT_DIR="$ROOT/VSCode-linux-$ARCH"
 
 if [ "$SKIP_BUILD" -eq 0 ]; then
     echo -e "${CYAN}--- Step 1: Building Mobius client ---${NC}"
-    bash "$SCRIPT_DIR/build-linux.sh"
+    bash "$SCRIPT_DIR/build-linux.sh" --arch "$ARCH"
 
     pushd "$VSCODE_DIR" >/dev/null
     echo "Running gulp vscode-linux-$ARCH-min..."

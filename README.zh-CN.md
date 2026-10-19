@@ -114,12 +114,12 @@ npm run package:linux
 ```
 
 打包完成后，生成文件位于 `./dist/`：
-- `dist/mobius_<version>_amd64.deb` （Ubuntu GUI 桌面版安装包）
-- `dist/mobius-<version>-linux-x64.tar.gz` （便携绿色版）
+- `dist/mobius_<version>_amd64.deb` / `dist/mobius_<version>_arm64.deb` （Ubuntu GUI 桌面版安装包）
+- `dist/mobius-<version>-linux-x64.tar.gz` / `dist/mobius-<version>-linux-arm64.tar.gz` （便携绿色版）
 
 直接在 Ubuntu 上安装运行：
 ```bash
-sudo apt install ./dist/mobius_*_amd64.deb
+sudo apt install ./dist/mobius_*.deb
 ```
 
 ##### 方式 2：Docker 容器一键打包（无需配置物理 Linux 环境）
@@ -236,10 +236,10 @@ Mobius web UI: http://localhost:5173/web/
 
 | 工作流文件 | 编译目标系统 | 输出安装包格式 | 云端 Runner |
 |---|---|---|---|
-| **`.github/workflows/build-all-platforms.yml`** | **macOS + Windows + Linux 三端并行** | `.dmg`, `.exe`, `.deb`, `.zip`, `.tar.gz` | `macos-14`, `macos-13`, `windows-2022`, `ubuntu-22.04` |
+| **`.github/workflows/build-all-platforms.yml`** | **macOS + Windows + Linux 三端并行** | `.dmg`, `.exe`, `.deb`, `.zip`, `.tar.gz` | `macos-14`, `macos-13`, `windows-2022`, `ubuntu-22.04` (x64), `ubuntu-24.04-arm` (arm64) |
 | **`.github/workflows/build-macos.yml`** | **macOS / 苹果桌面端** (Apple Silicon arm64 / Intel x64) | `Mobius-*-macOS-*.dmg`, `Mobius-*-darwin-*.zip` | `macos-14` (M系列), `macos-13` (Intel) |
 | **`.github/workflows/build-windows.yml`** | **Windows 桌面端** (x64 / arm64) | `Mobius-Setup-*.exe`, `Mobius-*-win32-*.zip` | `windows-2022` |
-| **`.github/workflows/build-ubuntu.yml`** | **Linux / Ubuntu 桌面端** (x64 / arm64) | `mobius_*_amd64.deb`, `mobius-*-linux-*.tar.gz` | `ubuntu-22.04` |
+| **`.github/workflows/build-ubuntu.yml`** | **Linux / Ubuntu 桌面端** (x64 / arm64) | `mobius_*_{amd64,arm64}.deb`, `mobius-*-linux-*.tar.gz` | `ubuntu-22.04` (x64), `ubuntu-24.04-arm` (arm64) |
 
 #### 如何一键触发云端打包与下载：
 

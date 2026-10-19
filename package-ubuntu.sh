@@ -112,5 +112,5 @@ ls -lh "$ROOT/dist"
 
 echo -e "\n${YELLOW}${BOLD}安装说明：${NC}"
 echo -e "在 Ubuntu 终端运行以下命令即可安装并打开 Mobius GUI 桌面版："
-echo -e "  ${CYAN}sudo apt install ./dist/mobius_*_amd64.deb${NC}"
+echo -e "  ${CYAN}sudo apt install ./dist/mobius_*.deb${NC}"
 echo -e "安装后直接在应用列表搜索 ${BOLD}Mobius${NC} 点击图标即可打开！\n"

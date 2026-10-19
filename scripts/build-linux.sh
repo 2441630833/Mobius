@@ -15,13 +15,41 @@ NC='\033[0m'
 
 echo -e "\n${CYAN}=== Building Mobius on Linux ===${NC}"
 
+# Parse options
+TARGET_ARCH=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --arch)
+            TARGET_ARCH="$2"
+            shift 2
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
 # Detect Arch
-ARCH="$(uname -m)"
-case "$ARCH" in
-    x86_64)  ARCH="x64" ;;
-    aarch64) ARCH="arm64" ;;
-    *)       echo -e "${YELLOW}[WARN] Unknown architecture: $ARCH, defaulting to x64${NC}"; ARCH="x64" ;;
-esac
+if [ -n "$TARGET_ARCH" ]; then
+    case "$TARGET_ARCH" in
+        x64|amd64|x86_64) ARCH="x64" ;;
+        arm64|aarch64)    ARCH="arm64" ;;
+        *)                ARCH="$TARGET_ARCH" ;;
+    esac
+elif [ -n "${npm_config_arch}" ]; then
+    case "${npm_config_arch}" in
+        x64|amd64|x86_64) ARCH="x64" ;;
+        arm64|aarch64)    ARCH="arm64" ;;
+        *)                ARCH="${npm_config_arch}" ;;
+    esac
+else
+    SYS_ARCH="$(uname -m)"
+    case "$SYS_ARCH" in
+        x86_64)  ARCH="x64" ;;
+        aarch64) ARCH="arm64" ;;
+        *)       echo -e "${YELLOW}[WARN] Unknown architecture: $SYS_ARCH, defaulting to x64${NC}"; ARCH="x64" ;;
+    esac
+fi
 echo -e "Target architecture: ${GREEN}linux-$ARCH${NC}\n"
 
 # 1. Check prerequisites
