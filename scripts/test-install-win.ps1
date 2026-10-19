@@ -107,7 +107,8 @@ function Start-Process {
     return $process
 }
 try {
-    $source = Get-Content -LiteralPath $InstallerPath -Raw -Encoding UTF8
+    # Decode HTTP bytes without stripping a BOM, matching irm | iex.
+    $source = [Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($InstallerPath))
     if ($Scenario -eq 'KeepOpen') { & ([scriptblock]::Create($source)) -KeepOpen }
     else { Invoke-Expression $source }
 } catch {
@@ -176,9 +177,9 @@ try {
             Assert-Test ($toasts[0].Data.Hidden -and $toasts[0].Data.RegisteredId) "$case incorrect notification host or app ID"
             $expectedTag = if ($case -eq 'EscapedToast') { 'v9<&' } else { 'v9.8.7' }
             Assert-Test ($toasts[0].Data.Message.Contains($expectedTag)) "$case corrupted notification content"
-            $expectedTitle = if ($case -eq 'CurrentDefault') { 'Mobius 已是最新版本' }
-                elseif ($case -in @('UpdateDefault', 'ForceCurrent', 'CustomPath')) { 'Mobius 更新成功' }
-                else { 'Mobius 安装成功' }
+            $expectedTitle = if ($case -eq 'CurrentDefault') { 'Mobius is up to date' }
+                elseif ($case -in @('UpdateDefault', 'ForceCurrent', 'CustomPath')) { 'Mobius updated successfully' }
+                else { 'Mobius installed successfully' }
             Assert-Test ($toasts[0].Data.Title -eq $expectedTitle) "$case incorrect notification title"
         }
         Assert-Test ($launches.Count -eq [int](-not ($noSuccess -or $case -eq 'CurrentDefault'))) "$case incorrect app launch"

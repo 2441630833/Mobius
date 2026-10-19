@@ -1,5 +1,6 @@
-﻿# =============================================================================
-# Mobius IDE — Windows One-Line Fast Installer & Auto-Updater
+# =============================================================================
+# Mobius IDE - Windows One-Line Fast Installer & Auto-Updater
+# Keep this file ASCII without a BOM for both irm | iex and saved PS 5.1 scripts.
 # Usage:
 #   irm https://raw.githubusercontent.com/2441630833/Mobius/main/scripts/install-win.ps1 | iex
 #
@@ -72,7 +73,7 @@ try {
         }
         return $true
     } catch {
-        Write-Warning "Mobius 已完成操作，但无法显示 Windows 通知，将保留终端结果。$($_.Exception.Message)"
+        Write-Warning "Mobius completed, but Windows notification failed. Keeping terminal open. $($_.Exception.Message)"
         return $false
     }
 }
@@ -83,7 +84,7 @@ function Complete-MobiusInstall {
     $notified = Show-MobiusToast -Title $Title -Message $Message -InstallPath $InstallPath
     $global:LASTEXITCODE = 0
     if ($notified -and -not $KeepOpen -and $env:MOBIUS_AUTO_CLOSE -ne '0') {
-        Write-Host '操作成功，终端将在 2 秒后自动关闭。设置 MOBIUS_AUTO_CLOSE=0 可保留终端。' -ForegroundColor Cyan
+        Write-Host 'Success. Closing terminal in 2 seconds. Set MOBIUS_AUTO_CLOSE=0 to keep it open.' -ForegroundColor Cyan
         Start-Sleep -Seconds 2
         exit 0
     }
@@ -251,7 +252,7 @@ if (-not $isInstalled) {
 
 if ($CheckOnly) {
     if ($needsUpdate) {
-        Write-Host "`n[Update Available] 发现新版本: $latestTag ($updateReason)" -ForegroundColor Yellow
+        Write-Host "`n[Update Available] New release: $latestTag ($updateReason)" -ForegroundColor Yellow
     } else {
         Write-Host "`n[Up to Date] Mobius is already up to date ($latestTag)." -ForegroundColor Green
     }
@@ -260,23 +261,23 @@ if ($CheckOnly) {
 
 # If already up-to-date and not forced, exit gracefully without redundant multi-GB downloads
 if (-not $needsUpdate) {
-    Write-Host "`n[Up to Date] 本地 Mobius 已是最新版本 ($latestTag)，无需重复下载更新。" -ForegroundColor Green
-    Write-Host "  - 当前安装路径: $installedPath" -ForegroundColor DarkGray
-    Write-Host "  - 若需强制重新下载安装/覆盖修复，可运行:" -ForegroundColor DarkGray
+    Write-Host "`n[Up to Date] Mobius is already current ($latestTag)." -ForegroundColor Green
+    Write-Host "  - Install path: $installedPath" -ForegroundColor DarkGray
+    Write-Host "  - To force reinstallation or repair, run:" -ForegroundColor DarkGray
     Write-Host "    `$env:MOBIUS_FORCE=1; irm https://raw.githubusercontent.com/$Repo/main/scripts/install-win.ps1 | iex`n" -ForegroundColor Yellow
-    Write-Host "启动 Mobius: 终端运行 'mobius' 或在开始菜单直接打开即可。" -ForegroundColor Cyan
-    Complete-MobiusInstall -Title 'Mobius 已是最新版本' -Message "当前版本 $latestTag，无需重复更新。" -InstallPath $installedPath
+    Write-Host "Launch Mobius: run 'mobius' or open it from the Start Menu." -ForegroundColor Cyan
+    Complete-MobiusInstall -Title 'Mobius is up to date' -Message "Current release: $latestTag. No update needed." -InstallPath $installedPath
     return
 }
 
 # 5. Handle Running Processes Before Update
 if ($isInstalled) {
-    Write-Host "`n=== 正在同步更新 Mobius ===" -ForegroundColor Cyan
-    Write-Host "准备从 $($installedVer) $($installedTag) 同步更新至最新发布版 $latestTag..." -ForegroundColor Cyan
+    Write-Host "`n=== Updating Mobius ===" -ForegroundColor Cyan
+    Write-Host "Updating from $($installedVer) $($installedTag) to $latestTag..." -ForegroundColor Cyan
 
     $runningProcs = Get-Process Mobius -ErrorAction SilentlyContinue
     if ($runningProcs) {
-        Write-Host "检测到 Mobius 正在运行，正在请求安全保存工作区并退出..." -ForegroundColor Yellow
+        Write-Host "Mobius is running. Requesting workspace save and exit..." -ForegroundColor Yellow
         foreach ($p in $runningProcs) {
             try { $null = $p.CloseMainWindow() } catch {}
         }
@@ -287,7 +288,7 @@ if ($isInstalled) {
         }
         $stillRunning = Get-Process Mobius -ErrorAction SilentlyContinue
         if ($stillRunning) {
-            Write-Host "清理残留后台进程..." -ForegroundColor DarkGray
+            Write-Host "Closing remaining background processes..." -ForegroundColor DarkGray
             $stillRunning | Stop-Process -Force -ErrorAction SilentlyContinue
             Start-Sleep -Seconds 1
         }
@@ -302,7 +303,7 @@ try {
     Write-Host "Downloading Mobius installer ($latestTag)..." -ForegroundColor Cyan
     Invoke-WebRequest -Uri $downloadUrl -OutFile $tempInstaller -UseBasicParsing
 
-    Write-Host "Running Mobius Setup (正在静默安装，请稍候)..." -ForegroundColor Cyan
+    Write-Host "Running Mobius Setup (silent installation, please wait)..." -ForegroundColor Cyan
     # Suppress Inno's own launch; only start the app after a verified success.
     $installerArgs = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /MERGETASKS="!runcode" /DIR="' + $targetDir + '"'
     $process = Start-Process -FilePath $tempInstaller -ArgumentList $installerArgs -PassThru
@@ -311,13 +312,13 @@ try {
         # Wait for the installer itself, not its entire descendant process tree.
         $process.WaitForExit()
         if ($process.ExitCode -ne 0) {
-            throw "Mobius 安装失败（退出码 $($process.ExitCode)）。请保留此终端并重试。"
+            throw "Mobius installation failed (exit code $($process.ExitCode)). Keep this terminal and retry."
         }
     } finally {
         $process.Dispose()
     }
     if (-not (Test-Path -LiteralPath $mobiusExe -PathType Leaf)) {
-        throw "安装器已退出，但未找到 $mobiusExe。未记录更新成功，请重试安装。"
+        throw "Installer exited but $mobiusExe was not found. Update was not recorded; retry installation."
     }
     Set-Content -LiteralPath (Join-Path $targetDir '.mobius-installed-tag') -Value $latestTag -Encoding UTF8 -Force
 } catch {
@@ -333,19 +334,19 @@ try {
     $env:ELECTRON_NO_ATTACH_CONSOLE = '1'
     Start-Process -FilePath $mobiusExe -WorkingDirectory $targetDir
 } catch {
-    Write-Warning "Mobius 安装成功，但自动启动失败。请从开始菜单打开。$($_.Exception.Message)"
+    Write-Warning "Mobius installed, but launch failed. Open it from the Start Menu. $($_.Exception.Message)"
 } finally {
     [Environment]::SetEnvironmentVariable('ELECTRON_NO_ATTACH_CONSOLE', $previousNoAttachConsole, 'Process')
 }
 
 if ($isInstalled) {
-    $successTitle = 'Mobius 更新成功'
-    $successMessage = "已更新至 $latestTag，扩展、配置与工作区数据已保留。"
-    Write-Host "`n[Success] Mobius 已成功同步更新至最新版本 ($latestTag)！" -ForegroundColor Green
-    Write-Host "您的扩展插件、用户配置与工作区数据均完整保留。" -ForegroundColor DarkGray
+    $successTitle = 'Mobius updated successfully'
+    $successMessage = "Updated to $latestTag. Extensions, settings and workspace data preserved."
+    Write-Host "`n[Success] Mobius updated successfully ($latestTag)!" -ForegroundColor Green
+    Write-Host "Extensions, settings and workspace data preserved." -ForegroundColor DarkGray
 } else {
-    $successTitle = 'Mobius 安装成功'
-    $successMessage = "已安装 $latestTag，可从开始菜单或桌面打开 Mobius。"
+    $successTitle = 'Mobius installed successfully'
+    $successMessage = "Installed $latestTag. Open Mobius from the Start Menu or Desktop."
     Write-Host "`n[Success] Mobius has been installed successfully ($latestTag)!" -ForegroundColor Green
     Write-Host "You can find Mobius in your Start Menu and Desktop." -ForegroundColor DarkGray
 }
