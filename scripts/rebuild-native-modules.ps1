@@ -82,6 +82,8 @@ Import-NpmrcEnv (Join-Path $VsCodeDir ".npmrc")
 Push-Location $VsCodeDir
 node build/npm/preinstall.ts
 if ($LASTEXITCODE -ne 0) { Pop-Location; exit 1 }
+node (Join-Path $Root "scripts\patch-native-keymap.cjs")
+if ($LASTEXITCODE -ne 0) { Pop-Location; exit 1 }
 
 $failed = @()
 foreach ($pkg in $Packages) {

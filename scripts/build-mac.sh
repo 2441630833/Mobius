@@ -174,6 +174,7 @@ fi
 # - @vscode/sqlite3: state, configuration, and workspace storage persistence
 # - native-keymap: keyboard layout detection
 echo "Rebuilding native dependencies for Electron darwin-$ARCH..."
+node "$SCRIPT_DIR/patch-native-keymap.cjs"
 npm rebuild node-pty @vscode/sqlite3 native-keymap --build-from-source --arch="$ARCH" || true
 
 echo "Compiling VS Code client..."
