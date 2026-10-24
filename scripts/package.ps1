@@ -205,6 +205,13 @@ if ($env:SKIP_GODOT_STAGE -ne "1") {
 } else {
     Write-Host "`n=== Godot payload (skipped: SKIP_GODOT_STAGE=1) ===" -ForegroundColor Yellow
 }
+if ($env:SKIP_ECC_STAGE -ne "1") {
+    Invoke-Step "Stage ECC agent payload (skills + agents + manifests)" {
+        & "$Root\scripts\stage-ecc.ps1" -Arch $Arch
+    }
+} else {
+    Write-Host "`n=== ECC payload (skipped: SKIP_ECC_STAGE=1) ===" -ForegroundColor Yellow
+}
 
 Push-Location $VsCodeDir
 $env:NODE_OPTIONS = "--experimental-strip-types"
@@ -252,5 +259,8 @@ if ($env:SKIP_GODOT_STAGE -ne "1") {
         $includes += " + engine"
     }
     $includes += ")"
+}
+if ($env:SKIP_ECC_STAGE -ne "1") {
+    $includes += " + ECC (300+ skills & agent harness)"
 }
 Write-Host "Includes : $includes`n" -ForegroundColor Gray

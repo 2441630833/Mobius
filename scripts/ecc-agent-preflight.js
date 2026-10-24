@@ -15,16 +15,29 @@ const path = require('node:path');
 const fs = require('node:fs');
 
 function resolveEccRoot(startDir) {
-	const candidates = [
-		path.join(__dirname, '..', 'ECC'),
-		path.join(process.cwd(), 'ECC'),
-	];
+	const candidates = [];
+	if (process.env.MOBIUS_ECC_ROOT) {
+		candidates.push(process.env.MOBIUS_ECC_ROOT);
+	}
 	if (startDir) {
-		candidates.unshift(path.join(startDir, 'ECC'));
+		candidates.push(path.join(startDir, 'resources', 'mobius-ecc'));
+		candidates.push(path.join(startDir, 'ECC'));
+	}
+	// Packaged app: scripts/ -> sibling resources/mobius-ecc
+	candidates.push(path.join(__dirname, '..', 'resources', 'mobius-ecc'));
+	// Packaged app: inside resources/mobius-ecc/scripts -> parent resources/mobius-ecc
+	candidates.push(path.join(__dirname, '..'));
+	// Monorepo checkout: scripts/ -> sibling ECC
+	candidates.push(path.join(__dirname, '..', 'ECC'));
+	// Current working directory
+	candidates.push(path.join(process.cwd(), 'resources', 'mobius-ecc'));
+	candidates.push(path.join(process.cwd(), 'ECC'));
+	if (process.env.LOCALAPPDATA) {
+		candidates.push(path.join(process.env.LOCALAPPDATA, 'Programs', 'Mobius', 'resources', 'mobius-ecc'));
 	}
 	for (const candidate of candidates) {
 		try {
-			if (fs.existsSync(candidate) && fs.existsSync(path.join(candidate, 'package.json'))) {
+			if (candidate && fs.existsSync(candidate) && fs.existsSync(path.join(candidate, 'package.json')) && (fs.existsSync(path.join(candidate, 'scripts', 'ecc.js')) || fs.existsSync(path.join(candidate, 'manifests', 'install-components.json')))) {
 				return path.resolve(candidate);
 			}
 		} catch {
