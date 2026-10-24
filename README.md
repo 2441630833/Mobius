@@ -461,9 +461,9 @@ Type `/skills` in the chat box to browse the currently available Skills.
 
 ---
 
-## Pluggable Agent Harness (roadmap)
+## Pluggable Agent Harness
 
-Mobius currently ships with a single built-in agent harness: **Continue**. It is compiled in and not yet replaceable. The roadmap extracts a thin harness abstraction so multiple agent engines can coexist:
+Mobius features a pluggable agent harness layer where multiple agent engines coexist:
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -474,15 +474,15 @@ Mobius currently ships with a single built-in agent harness: **Continue**. It is
 │            Harness registry (pluggable)      │
 │   ┌──────────────┐   ┌──────────────────┐   │
 │   │   Continue   │   │ DeepSeek harness │   │
-│   │  (built-in)  │   │    (roadmap)     │   │
+│   │  (built-in)  │   │  (dsh submodule) │   │
 │   └──────────────┘   └──────────────────┘   │
 └─────────────────────────────────────────────┘
 ```
 
 - **Continue remains the default** — chat, inline editing, `@codebase`, autocomplete, and all existing Skills continue to work as before.
-- **DeepSeek harness will join as a sibling engine** — not a fork replacement, but a peer engine that coexists, letting users switch to a more suitable reasoning style per task (or per model).
+- **DeepSeek harness (`dsh`) joins as a sibling engine** — incorporated via submodule at `deepseek-harness`, providing event-driven turn/step lifecycle, loop-hygiene guards (anti-repetition, step budget), and modular capability seams.
 - **Skills and tools are shared** — all harnesses read the same `.agents/skills/` library and the same tool superset, so self-summarized Skills keep accumulating regardless of which engine executes.
-- **Harness is selected per session** — switch engines via the model picker / command palette; in the future the RSI loop can also evaluate which harness performs better on a given class of task.
+- **Harness is selectable per session or setting** — switch engines via settings (`mobius.agentHarness.engine`), command palette (`Mobius: Switch Agent Harness`), or inline prefix (`/deepseek <query>`). The RSI loop can also evaluate which harness performs better on a given class of task.
 
 This keeps Mobius harness-agnostic at the architecture level, while Continue remains the stable, out-of-the-box default today.
 
@@ -569,6 +569,7 @@ By submitting a contribution you agree to license it under the MIT License.
 - **Mobius** — [MIT](LICENSE.txt)
 - **VS Code** (fork base) — MIT
 - **Continue** — Apache 2.0
+- **ECC** (agent harness optimization submodule) — [MIT](ECC/LICENSE)
 - **Hermes Agent** (reference submodule) — see its repository
 - **Ollama** (bundled runtime) — MIT
 

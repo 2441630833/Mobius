@@ -447,9 +447,9 @@ Skill 是 `.agents/skills/` 下的文件夹（Markdown + 脚本）。每个 Skil
 
 ---
 
-## 可插拔 Agent Harness（路线图）
+## 可插拔 Agent Harness
 
-目前 Mobius 内置的 agent harness 只有 **Continue 一个**——它是编译进去的，暂时不可替换。路线图上会抽出一层薄薄的 harness 抽象，让多个 agent 引擎共存：
+Mobius 现已支持可插拔 agent harness 抽象层，让多个 agent 引擎共存：
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -460,15 +460,15 @@ Skill 是 `.agents/skills/` 下的文件夹（Markdown + 脚本）。每个 Skil
 │            Harness 注册表（可插拔）          │
 │   ┌──────────────┐   ┌──────────────────┐   │
 │   │   Continue   │   │ DeepSeek harness │   │
-│   │  （内置）    │   │   （路线图）     │   │
+│   │  （内置）    │   │  （dsh submodule）│   │
 │   └──────────────┘   └──────────────────┘   │
 └─────────────────────────────────────────────┘
 ```
 
 - **Continue 仍是默认**——对话、内联编辑、`@codebase`、自动补全，以及已有的全部 Skill 照常工作。
-- **DeepSeek harness 将作为同级引擎加入**——不是 fork 替换，而是作为对等的引擎并存，用户可以按任务（或按模型）切换到更合适的推理风格。
+- **DeepSeek harness（`dsh`）已作为同级引擎加入**——通过 `deepseek-harness` submodule 集成，具备基于事件驱动的 turn/step 生命周期、防重复循环与步数门禁（Loop Hygiene Guards），以及解耦的 capability seams。
 - **Skill 与工具共享**——所有 harness 读取同一份 `.agents/skills/` 库与同一套工具超集，因此无论哪个引擎执行，自我总结的 Skill 都会持续累积。
-- **Harness 按会话选择**——通过模型选择器 / 命令面板切换引擎；未来 RSI 闭环还可以评估在某类任务上哪个 harness 表现更好。
+- **Harness 支持灵活选择**——可通过配置项（`mobius.agentHarness.engine`）、命令面板（`Mobius: Switch Agent Harness`）或前缀指令（`/deepseek <问题>`）切换引擎；未来 RSI 闭环还可以评估在某类任务上哪个 harness 表现更好。
 
 这样 Mobius 在架构层面保持 harness 无关，而 Continue 在今天仍是稳定、开箱即用的默认选项。
 
@@ -531,6 +531,7 @@ npm run rsi:rollback    # 回滚上一次晋升
 - **Mobius** — [MIT](LICENSE.txt)
 - **VS Code**（fork 基座）— MIT
 - **Continue** — Apache 2.0
+- **ECC**（Agent 框架性能优化子模块）— [MIT](ECC/LICENSE)
 - **Hermes Agent**（参考子模块）— 见其仓库
 - **Ollama**（内置运行时）— MIT
 
