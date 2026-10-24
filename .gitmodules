@@ -53,3 +53,9 @@
 	path = godogen
 	url = https://github.com/htdt/godogen.git
 
+[submodule "ECC"]
+	path = ECC
+	url = https://github.com/affaan-m/ECC.git
+[submodule "deepseek-harness"]
+	path = deepseek-harness
+	url = https://github.com/deepseek-ai/deepseek-harness.git
