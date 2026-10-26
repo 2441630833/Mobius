@@ -111,13 +111,8 @@ Push-Location extensions/vscode
 npm run prepackage
 if ($LASTEXITCODE -ne 0) { Pop-Location; Pop-Location; exit 1 }
 
+# prepackage already bundles target-specific OCR runtime and local weights.
 # esbuild: creates out/extension.js (required for VS Code to load the extension)
-if ($env:SKIP_GLM_OCR_BUNDLE -ne "1") {
-    & "$Root\scripts\ensure-glm-ocr-onnx.ps1" $(if ($env:CI -ne "true") { "-Strict" })
-    if ($LASTEXITCODE -ne 0 -and $env:CI -ne "true") { Pop-Location; Pop-Location; exit 1 }
-} else {
-    Write-Host "Skipping GLM-OCR ONNX bundle (SKIP_GLM_OCR_BUNDLE=1)" -ForegroundColor DarkGray
-}
 & "$Root\scripts\ensure-minilm.ps1"
 if ($LASTEXITCODE -ne 0) { Pop-Location; Pop-Location; exit 1 }
 if ($env:CONTINUE_RELEASE -eq "1") {

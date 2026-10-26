@@ -79,7 +79,6 @@ jobs:
           $arch = "${{ inputs.arch || 'x64' }}"
           $target = "${{ inputs.target || 'user' }}"
           $env:SKIP_OLLAMA_BUNDLE = '1'
-          $env:SKIP_GLM_OCR_BUNDLE = '1'
           $env:PACKAGE_FULL = '1'
           $env:PACKAGE_INCREMENTAL = '0'
           $env:ELECTRON_MIRROR = 'official'

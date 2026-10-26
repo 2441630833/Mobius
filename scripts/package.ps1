@@ -101,17 +101,6 @@ Invoke-Step "Sync LICENSE.txt into vscode (installer license page)" {
     Write-Host "Synced LICENSE.txt -> $dstLicense"
 }
 
-if ($env:SKIP_GLM_OCR_BUNDLE -ne "1") {
-    Invoke-Step "Ensure GLM-OCR ONNX model" {
-        & "$Root\scripts\ensure-glm-ocr-onnx.ps1" -Strict
-    }
-    Invoke-Step "Verify GLM-OCR ONNX" {
-        & "$Root\scripts\verify-glm-ocr-onnx.ps1"
-    }
-} else {
-    Write-Host "`n=== GLM-OCR ONNX (skipped: SKIP_GLM_OCR_BUNDLE=1) ===" -ForegroundColor Yellow
-}
-
 if ($env:SKIP_CONTINUE_BUILD -ne "1") {
     Invoke-Step "Build Continue extension (release)" {
         $env:CONTINUE_RELEASE = "1"
@@ -125,6 +114,11 @@ if ($env:SKIP_CONTINUE_BUILD -ne "1") {
         Write-Host "[FAIL] Missing Continue build: $extJs" -ForegroundColor Red
         exit 1
     }
+}
+
+Invoke-Step "Verify packaged GLM-OCR runtime and local model" {
+    node "$Root\continue\extensions\vscode\scripts\package-glm-ocr.js" --verify "win32-$Arch"
+    if ($LASTEXITCODE -ne 0) { throw "Packaged GLM-OCR is incomplete" }
 }
 
 if ($env:SKIP_VSCODE_BUILD -ne "1") {
