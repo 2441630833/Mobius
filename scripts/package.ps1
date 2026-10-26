@@ -10,6 +10,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
+# Continue's prepackage runs on the build host, which can differ from the target
+# (Windows ARM64 builds use an x64 runner). Propagate before building dependencies.
+$env:CONTINUE_VSCODE_TARGET = "win32-$Arch"
 $VsCodeDir = Join-Path $Root "vscode"
 $ClientDir = Join-Path (Split-Path -Parent $VsCodeDir) "VSCode-win32-$Arch"
 $SetupDir = Join-Path $VsCodeDir ".build\win32-$Arch\$Target-setup"

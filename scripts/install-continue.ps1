@@ -19,7 +19,9 @@ Write-Host "Skips cross-platform binary/pkg build that fails on Windows.`n" -For
 . "$Root\scripts\vs-dev-env.ps1"
 Import-VsDevEnvironment | Out-Null
 
-$env:CONTINUE_VSCODE_TARGET = "win32-x64"
+if (-not $env:CONTINUE_VSCODE_TARGET) {
+    $env:CONTINUE_VSCODE_TARGET = & node -p "process.platform + '-' + process.arch"
+}
 $env:npm_config_msvs_version = Get-VsMsvsVersion
 $env:npm_config_node_gyp = (Join-Path $Root "scripts\node-gyp-win.js")
 # SKIP_INSTALLS set to true before prepackage after ensure-sqlite.ps1 runs
