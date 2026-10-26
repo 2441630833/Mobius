@@ -25,11 +25,11 @@
 - Overwriting or ignoring user project-specific `.vscode/extensions.json`.
 
 ## Tasks
-- [ ] Task 1: Update `vscode/src/vs/workbench/contrib/extensions/browser/extensionsViews.ts` to add gallery popular fallback in `getAllRecommendationsModel` and auto-collapse in `DefaultRecommendedExtensionsView.show`.
-- [ ] Task 2: Inject `extensionRecommendations`, `configBasedExtensionTips`, `exeBasedExtensionTips`, `languageExtensionTips`, `keymapExtensionTips`, and `remoteExtensionTips` into `vscode/product.json`.
-- [ ] Task 3: Compile VS Code client (`npm run compile-client` or gulp) and verify TypeScript / lint gates.
-- [ ] Task 4: Sync updated `product.json` and compiled output to `VSCode-win32-x64` and `$LOCALAPPDATA/Programs/Mobius`.
-- [ ] Task 5: Verify runtime integrity and test that recommended extensions query returns non-zero results.
+- [x] Task 1: Update `vscode/src/vs/workbench/contrib/extensions/browser/extensionsViews.ts` to add gallery popular fallback in `getAllRecommendationsModel` and auto-collapse in `DefaultRecommendedExtensionsView.show`.
+- [x] Task 2: Inject `extensionRecommendations`, `configBasedExtensionTips`, `exeBasedExtensionTips`, `languageExtensionTips`, `keymapExtensionTips`, and `remoteExtensionTips` into `vscode/product.json`.
+- [x] Task 3: Compile VS Code client (`npm run compile-client` or gulp) and verify TypeScript / lint gates.
+- [x] Task 4: Sync updated `product.json` and compiled output to `VSCode-win32-x64` and `$LOCALAPPDATA/Programs/Mobius`.
+- [x] Task 5: Verify runtime integrity and test that recommended extensions query returns non-zero results.
 
 ## Acceptance Criteria
 1. `vscode/product.json` contains full tip dictionaries (`extensionRecommendations`, `exeBasedExtensionTips`, `configBasedExtensionTips`, etc.).
