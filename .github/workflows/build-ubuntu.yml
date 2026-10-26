@@ -42,9 +42,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Checkout required submodules (vscode & continue)
+      - name: Checkout required submodules (vscode, continue, ECC)
         run: |
-          git submodule update --init --recursive vscode continue
+          git submodule update --init --recursive vscode continue ECC
 
       - name: Setup Node.js 22.x
         uses: actions/setup-node@v4
@@ -118,9 +118,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Checkout required submodules (vscode & continue)
+      - name: Checkout required submodules (vscode, continue, ECC)
         run: |
-          git submodule update --init --recursive vscode continue
+          git submodule update --init --recursive vscode continue ECC
 
       - name: Setup Node.js 22.x
         uses: actions/setup-node@v4
