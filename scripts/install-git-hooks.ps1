@@ -10,6 +10,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false) } catch {}
+try { $OutputEncoding = [System.Text.UTF8Encoding]::new($false) } catch {}
 
 function Set-LocalGitConfig {
     param([string]$Key, [string]$Value)
@@ -27,9 +29,10 @@ Write-Host "install-git-hooks: configuring repo at $(Get-Location)" -ForegroundC
 # 1. Point git at the version-controlled hooks directory
 Set-LocalGitConfig 'core.hooksPath' '.githooks'
 
-# 2. Lock commit-message encoding to UTF-8 (the cp936 mojibake trap)
+# 2. Lock commit-message and log output encoding to UTF-8 (the cp936 mojibake trap)
 Set-LocalGitConfig 'i18n.commitencoding' 'utf-8'
 Set-LocalGitConfig 'i18n.logoutputencoding' 'utf-8'
+Set-LocalGitConfig 'core.quotepath' 'false'
 
 # 3. Auto-include the repo-root .gitconfig (core.hooksPath + i18n.* live there)
 $includePath = '../.gitconfig'

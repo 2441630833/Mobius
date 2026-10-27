@@ -1,5 +1,7 @@
 # Mobius -- Setup Script
 $ErrorActionPreference = "Stop"
+try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false) } catch {}
+try { $OutputEncoding = [System.Text.UTF8Encoding]::new($false) } catch {}
 $Root = Split-Path -Parent $PSScriptRoot
 
 Write-Host "`n=== Mobius Setup ===" -ForegroundColor Cyan
@@ -11,6 +13,16 @@ if (-not $node) {
     exit 1
 }
 Write-Host "Node.js: $(node -v)" -ForegroundColor Green
+
+# Configure Git UTF-8 encoding (prevent CP936/GBK mojibake on Windows)
+try {
+    git config --global core.quotepath false
+    git config --global i18n.logoutputencoding utf-8
+    git config --global i18n.commitencoding utf-8
+    Write-Host "Git UTF-8 encoding configured (quotepath, logoutputencoding, commitencoding)." -ForegroundColor Green
+} catch {
+    Write-Host "Note: Could not set global git config: $($_.Exception.Message)" -ForegroundColor Yellow
+}
 
 # Copy .env.example to .env if missing
 if (-not (Test-Path "$Root\.env")) {

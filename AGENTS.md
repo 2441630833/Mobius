@@ -125,6 +125,15 @@ that finishes the user's actual task**.
    - `git -c i18n.commitencoding=utf-8 commit-tree ...` (set the encoding
      before each call; do not rely on the global config being set).
 
+   When **reading or inspecting files**, **always prefer structured file-reading tools**
+   (`read_file`, `view`) over running terminal commands like `type`, `cat`, or
+   `Get-Content`. In Windows PowerShell 5.1, `Get-Content` defaults to ANSI (CP936)
+   and will corrupt UTF-8 text into mojibake (`鎺ㄩ€...`). If PowerShell `Get-Content`
+   must be run via terminal, you **must** pass `-Encoding utf8` (e.g.
+   `Get-Content -Path <file> -Encoding utf8`). When running PowerShell terminal
+   commands, enforce UTF-8:
+   `[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); $OutputEncoding = [System.Text.UTF8Encoding]::new($false); chcp 65001`.
+
 2.5 **Never write a "请回复继续" / "请发送继续修改" / "reply continue" /
    "shall I continue?" prompt** in the middle of a task. The only legitimate
    user-facing prompts are:
