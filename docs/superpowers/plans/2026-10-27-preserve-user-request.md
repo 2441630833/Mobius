@@ -12,8 +12,8 @@ Preserve unrelated dirty submodules hermes-agent and vendor/*. Incorporate the e
 ## Tasks
 1. [x] Separate automatic skill references from explicitly requested skill bodies in warm and cold routing.
 2. [x] Stop promoting ECC output to system instructions, fail open without invented fallback workflows, and enforce current-request precedence.
-3. [ ] Add regressions; run targeted tests and npm run compile (may exceed five minutes). get_errors/manage_todo_list are unavailable; use this checklist and compiler diagnostics.
-4. [ ] Review and commit related vscode changes and root plans/pointer; preserve declared unrelated changes.
+3. [x] Add regressions; run targeted tests and npm run compile (may exceed five minutes). get_errors/manage_todo_list are unavailable; use this checklist and compiler diagnostics.
+4. [x] Review and commit related vscode changes and root plans/pointer; preserve declared unrelated changes.
 
 ## Acceptance criteria
 Auto-routed skill body instructions cannot introduce mockups, new projects, README edits or other deliverables into the model request. Explicit skills remain available. ECC failure supplies no workflow. The original user message remains intact. Tests and compilation pass or external blockers are recorded accurately.
