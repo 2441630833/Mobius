@@ -32,7 +32,7 @@ Mobius is built on a [VS Code](https://github.com/microsoft/vscode) fork with th
 | Layer | Purpose |
 |---|---|
 | 🧠 **Self-summarizing Skills** | Distills successfully completed Agent tasks into reusable, versionable Skills (Markdown playbooks + tool sets). The more tasks you complete, the richer your Skill library becomes. |
-| 🎯 **Intent → Skill recommendation** | Hybrid embedding + lexical retrieval that reads the intent of your request and automatically preloads the most relevant Skills into the Agent's context — no need to type `/skill` manually. |
+| 🎯 **Intent → Skill recommendation** | Hybrid embedding + lexical retrieval recommends relevant Skills for the request; the agent can read a suggested Skill when it helps. Explicitly selected Skills can be loaded into context. |
 | 🔄 **RSI** | *Recursive Self-Improvement*. Inside a **controlled sandbox** (hidden acceptance test set, independent evaluator, quality gates, human approval), let the Agent propose changes to its own Skills, validate them automatically, and only promote winning candidate versions. Wired into the live Skill engine, plus a runnable reference loop in [`rsi-test/`](rsi-test/README.md). |
 
 The end result: an IDE whose Agent grows more capable the longer you use it — every success you have becomes its instinct.
@@ -45,8 +45,9 @@ The end result: an IDE whose Agent grows more capable the longer you use it — 
 - **Continue built in** — chat, inline editing, `@codebase` repository indexing, autocomplete.
 - **Local embeddings + OCR** — `@codebase` uses in-process `transformers.js` (`all-MiniLM-L6-v2`); GLM-OCR still runs on bundled Ollama. Chat uses cloud models.
 - **Skill system** — file-based Skills in `.agents/skills/`, hot-reloadable and shareable via git.
-- **Intent-driven Skill matching** — hybrid recall (embedding + lexical) scores Skills for every query and preloads the top matches.
-- **Pluggable agent harness (roadmap)** — Continue is currently the built-in and only harness; the roadmap extracts a thin harness abstraction so multiple agent engines (such as DeepSeek's agent harness) can coexist as plugins that complement Continue, rather than replacing it.
+- **Intent-driven Skill matching** — hybrid recall (embedding + lexical) suggests relevant Skills; automatic matches are references, not proof that their instructions were read or followed.
+- **ECC agent catalog** — bundled profiles include planning, architecture, code review, testing and language-specific specialists; see [ECC agents](#ecc-agent-catalog).
+- **Pluggable agent harness** — choose the Continue or DeepSeek harness through settings, a command, or the `/deepseek` prefix; see [Pluggable Agent Harness](#pluggable-agent-harness).
 - **Multi-agent tool superset** — both Continue and GitHub Copilot Chat tools are provided by default (`MOBIUS_SKIP_COPILOT=1` to toggle).
 - **RSI loop** — sandboxed self-improvement with training/acceptance data isolation, 5 quality gates, human approval, and one-step rollback. Live engine in the workbench (`continue.rsi.mode`: off/shadow/enforce) + [`rsi-test/`](rsi-test/README.md) reference loop (`npm run rsi:test`).
 
@@ -443,7 +444,7 @@ npm run bundle:ollama
 
 ## Skills and Intent Matching
 
-Skills are folders under `.agents/skills/` (Markdown + scripts). Each Skill declares the scenarios it applies to; Mobius's hybrid retriever (embedding + lexical) scores Skills against the current request and preloads the top few into the Agent's system prompt.
+Skills are folders under `.agents/skills/` (Markdown + scripts). Each Skill declares the scenarios it applies to; Mobius's hybrid retriever (embedding + lexical) scores Skills against the current request. Automatic matches provide paths for the model to read if relevant, while explicitly selected Skills can be loaded into the request context.
 
 ```
 .agents/skills/
@@ -455,9 +456,17 @@ Skills are folders under `.agents/skills/` (Markdown + scripts). Each Skill decl
 
 - Skills are **plain-text files** — versionable, forkable, and shareable via git.
 - After completing a task, the Agent can **write a new Skill** (self-summarization).
-- The matching process leaves logs locally, so you can inspect **why** a Skill was selected.
+- The matching process records local scores and candidates; these logs do not prove that the model read or followed a suggested Skill.
 
 Type `/skills` in the chat box to browse the currently available Skills.
+
+---
+
+## ECC Agent Catalog
+
+Mobius integrates [Everything Claude Code (ECC)](https://github.com/affaan-m/ECC) as a bundled submodule. The current pinned revision's [`agents/`](https://github.com/affaan-m/ECC/tree/90606c8315ee09cafc303515c5f33024db6b9882/agents) directory contains 71 agent profiles, including `planner`, `architect`, `code-reviewer`, `security-reviewer`, `tdd-guide`, `python-reviewer`, `typescript-reviewer`, and `fsharp-reviewer`. This is a catalog of specialized profiles, separate from the four Mobius interaction modes and the selectable agent harnesses. The catalog is discovered from the installed ECC payload and can change when the submodule is updated.
+
+In Agent mode, ECC preflight analyzes the request and suggests relevant Skills and agent profiles. A suggestion does not mean a Skill was read or an agent was invoked. The chat records observed Skill reads, ECC agent profile reads, and agent tool calls separately; reading a profile does not itself invoke an agent. A model-generated explanation is a brief user-facing rationale, not its private reasoning.
 
 ---
 

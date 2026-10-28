@@ -32,7 +32,7 @@ Mobius 在 [VS Code](https://github.com/microsoft/vscode) 分支的基础上，�
 | 层级 | 作用 |
 |---|---|
 | 🧠 **自我总结 Skill** | 把 Agent 成功完成的任务，蒸馏成可复用、可版本化的 Skill（Markdown 操作手册 + 工具集）。完成的任务越多，Skill 库越丰富。 |
-| 🎯 **意图 → Skill 推荐** | 混合 embedding + 词法检索，读懂用户请求的意图，自动把最相关的 Skill 预加载到 Agent 上下文中——无需手动输入 `/skill`。 |
+| 🎯 **意图 → Skill 推荐** | 混合 embedding + 词法检索，根据请求推荐相关 Skill；Agent 可在有帮助时读取建议的 Skill，显式选择的 Skill 可加载到上下文中。 |
 | 🔄 **RSI** | *Recursive Self-Improvement，递归自我改进*。在**受控沙箱**内（隐藏的验收测试集、独立评估器、质量门禁、人工审批），让 Agent 提出对自身 Skill 的修改建议，自动验证，只有胜出的候选版本才会晋升。可运行的参考闭环见 [`rsi-test/`](rsi-test/README.md)。 |
 
 最终效果：一个使用越久、Agent 能力越强的 IDE——你的每一次成功，都会变成它的本能。
@@ -45,8 +45,9 @@ Mobius 在 [VS Code](https://github.com/microsoft/vscode) 分支的基础上，�
 - **内置 Continue**——对话、内联编辑、`@codebase` 代码库索引、自动补全。
 - **本地 embedding + OCR**——`@codebase` 使用进程内 `transformers.js`（`all-MiniLM-L6-v2`）；GLM-OCR 仍走内置 Ollama。对话走云端模型。
 - **Skill 系统**——基于文件的 Skill，位于 `.agents/skills/`，支持热加载、通过 git 分享。
-- **意图驱动的 Skill 匹配**——混合召回（embedding + 词法）针对每次提问给 Skill 打分并预加载 Top 匹配。
-- **可插拔 agent harness（路线图）**——目前 Continue 是内置且唯一的 harness；路线图上会抽出一层 harness 抽象，让多个 agent 引擎（如 DeepSeek 的 agent harness）可以插拔共存、与 Continue 相辅相成，而不是替换。
+- **意图驱动的 Skill 匹配**——混合召回（embedding + 词法）推荐相关 Skill；自动匹配提供路径引用，并不代表指令已经被读取或遵循。
+- **ECC Agent 目录**——内置规划、架构、代码审查、测试及不同语言的专家配置，详见 [ECC Agent 目录](#ecc-agent-目录)。
+- **可插拔 Agent Harness**——可通过设置、命令或 `/deepseek` 前缀选择 Continue 或 DeepSeek，详见[可插拔 Agent Harness](#可插拔-agent-harness)。
 - **多 Agent 工具超集**——默认同时提供 Continue 与 GitHub Copilot Chat 工具（`MOBIUS_SKIP_COPILOT=1` 可切换）。
 - **路线图：RSI 闭环**——沙箱化自我改进，训练/验收数据隔离、5 项质量门禁、人工审批。
 
@@ -429,7 +430,7 @@ npm run bundle:ollama
 
 ## Skill 与意图匹配
 
-Skill 是 `.agents/skills/` 下的文件夹（Markdown + 脚本）。每个 Skill 声明自己的适用场景；Mobius 的混合检索器（embedding + 词法）针对当前请求给 Skill 打分，并把得分最高的几个预加载进 Agent 的系统提示词。
+Skill 是 `.agents/skills/` 下的文件夹（Markdown + 脚本）。每个 Skill 声明自己的适用场景；Mobius 的混合检索器（embedding + 词法）针对当前请求给 Skill 打分。自动匹配提供路径，模型可在相关时读取；显式选择的 Skill 可加载到请求上下文中。
 
 ```
 .agents/skills/
@@ -441,9 +442,17 @@ Skill 是 `.agents/skills/` 下的文件夹（Markdown + 脚本）。每个 Skil
 
 - Skill 是**纯文本文件**——可版本化、可 fork、可通过 git 分享。
 - Agent 在完成任务后可以**写出新的 Skill**（自我总结）。
-- 匹配过程在本地留有日志，可查看某个 Skill **为什么**被选中。
+- 匹配过程在本地记录候选项和评分；这些日志不能证明模型已经读取或遵循了建议的 Skill。
 
 在对话框输入 `/skills` 可浏览当前可用的 Skill。
+
+---
+
+## ECC Agent 目录
+
+Mobius 通过内置子模块集成 [Everything Claude Code（ECC）](https://github.com/affaan-m/ECC)。当前固定版本的 [`agents/`](https://github.com/affaan-m/ECC/tree/90606c8315ee09cafc303515c5f33024db6b9882/agents) 目录包含 71 个 Agent 配置，例如 `planner`、`architect`、`code-reviewer`、`security-reviewer`、`tdd-guide`、`python-reviewer`、`typescript-reviewer` 和 `fsharp-reviewer`。这些专业配置与 Mobius 的四种交互模式、可选择的 Agent Harness 是不同层次；目录从安装的 ECC 资源动态发现，数量会随子模块更新而变化。
+
+Agent 模式下，ECC preflight 会分析请求并推荐相关 Skill 和 Agent。推荐不代表 Skill 已被读取，也不代表 Agent 已被调用。对话会分别记录可观察到的 Skill 读取、ECC Agent 配置文件读取和 Agent 工具调用；读取配置本身并不代表调用了 Agent。模型给出的简短选择说明是面向用户的理由，不是其内部思考过程。
 
 ---
 
