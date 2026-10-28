@@ -134,7 +134,15 @@ function Apply-MobiusPatch {
         }
 
         $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
-        if ($manifest.fromTag -and $ExpectedFromTag -and ($manifest.fromTag -ne '*') -and ($manifest.fromTag -ne $ExpectedFromTag)) {
+        $tagAllowed = $false
+        if (-not $manifest.fromTag -or -not $ExpectedFromTag) {
+            $tagAllowed = $true
+        } elseif ($manifest.fromTag -eq '*' -or ($manifest.fromTag -is [array] -and $manifest.fromTag -contains $ExpectedFromTag)) {
+            $tagAllowed = $true
+        } elseif ($manifest.fromTag -eq $ExpectedFromTag) {
+            $tagAllowed = $true
+        }
+        if (-not $tagAllowed) {
             Write-Warning "Patch targets $($manifest.fromTag), but local version is $ExpectedFromTag."
             return $false
         }
@@ -242,7 +250,8 @@ function Apply-MobiusPatch {
         }
     }
 }
-
+
+
 try {
     [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 } catch {}

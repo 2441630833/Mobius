@@ -173,8 +173,15 @@ if ($PreviousManifest -and (Test-Path $PreviousManifest)) {
         if ($PreviousTag) {
             $targetRelease = $releases | Where-Object { $_.tag_name -eq $PreviousTag } | Select-Object -First 1
         } else {
-            # Find latest release that is not the current tag
-            $targetRelease = $releases | Where-Object { $_.tag_name -ne $CurrentTag } | Select-Object -First 1
+            # Find newest previous release that HAS a manifest
+            foreach ($rel in $releases) {
+                if ($rel.tag_name -eq $CurrentTag) { continue }
+                $mAsset = $rel.assets | Where-Object { $_.name -like "Mobius-manifest-*-win32-${Arch}.json" -or $_.name -eq "Mobius-manifest-win32-${Arch}.json" } | Select-Object -First 1
+                if ($mAsset) {
+                    $targetRelease = $rel
+                    break
+                }
+            }
         }
 
         if ($targetRelease) {
@@ -301,16 +308,30 @@ if ($prevManifest -and $prevManifest.files) {
             Copy-Item -LiteralPath $srcPath -Destination $destPath -Force
         }
 
-        # Create zip archives
+        # Create tag-specific zip archive
         $patchZipNamed = Join-Path $OutputDir "Mobius-Patch-${prevTag}-to-${CurrentTag}-win32-${Arch}.zip"
-        $patchZipGeneric = Join-Path $OutputDir "Mobius-Patch-win32-${Arch}.zip"
-
         if (Test-Path $patchZipNamed) { Remove-Item -LiteralPath $patchZipNamed -Force }
-        if (Test-Path $patchZipGeneric) { Remove-Item -LiteralPath $patchZipGeneric -Force }
 
-        Write-Host "Compressing delta package..." -ForegroundColor Cyan
+        Write-Host "Compressing tag-specific delta package ($patchZipNamed)..." -ForegroundColor Cyan
         [System.IO.Compression.ZipFile]::CreateFromDirectory($stagingDir, $patchZipNamed, [System.IO.Compression.CompressionLevel]::Optimal, $false)
-        Copy-Item -LiteralPath $patchZipNamed -Destination $patchZipGeneric -Force
+
+        # Create compatibility aliases for recent previous versions (v1.0.17, v1.0.18)
+        if ($prevTag -eq 'v1.0.19') {
+            $patchZip17 = Join-Path $OutputDir "Mobius-Patch-v1.0.17-to-${CurrentTag}-win32-${Arch}.zip"
+            $patchZip18 = Join-Path $OutputDir "Mobius-Patch-v1.0.18-to-${CurrentTag}-win32-${Arch}.zip"
+            Copy-Item -LiteralPath $patchZipNamed -Destination $patchZip17 -Force
+            Copy-Item -LiteralPath $patchZipNamed -Destination $patchZip18 -Force
+        }
+
+        # Create generic zip with fromTag = "*" for universal compatibility
+        $patchManifest.fromTag = "*"
+        $patchManifestJson = $patchManifest | ConvertTo-Json -Depth 5
+        [System.IO.File]::WriteAllText((Join-Path $stagingDir "patch-manifest.json"), $patchManifestJson, [System.Text.UTF8Encoding]::new($false))
+
+        $patchZipGeneric = Join-Path $OutputDir "Mobius-Patch-win32-${Arch}.zip"
+        if (Test-Path $patchZipGeneric) { Remove-Item -LiteralPath $patchZipGeneric -Force }
+        Write-Host "Compressing generic delta package ($patchZipGeneric)..." -ForegroundColor Cyan
+        [System.IO.Compression.ZipFile]::CreateFromDirectory($stagingDir, $patchZipGeneric, [System.IO.Compression.CompressionLevel]::Optimal, $false)
 
         $zipSize = (Get-Item $patchZipNamed).Length
         Write-Host "Delta package created successfully!" -ForegroundColor Green
