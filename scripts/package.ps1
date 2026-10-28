@@ -5,7 +5,10 @@ param(
     [string]$Arch = "x64",
 
     [ValidateSet("user", "system")]
-    [string]$Target = $(if ($env:PACKAGE_TARGET -in @("user", "system")) { $env:PACKAGE_TARGET } else { "user" })
+    [string]$Target = $(if ($env:PACKAGE_TARGET -in @("user", "system")) { $env:PACKAGE_TARGET } else { "user" }),
+
+    [switch]$CreateDelta = $false,
+    [string]$PreviousManifest = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -261,3 +264,12 @@ if ($env:SKIP_ECC_STAGE -ne "1") {
     $includes += " + ECC (300+ skills & agent harness)"
 }
 Write-Host "Includes : $includes`n" -ForegroundColor Gray
+
+if ($CreateDelta -or $env:CREATE_DELTA -eq "1") {
+    $deltaScript = Join-Path $Root "scripts\generate-delta.ps1"
+    if (Test-Path $deltaScript) {
+        Write-Host "=== Generating Manifest and Delta Package ===" -ForegroundColor Cyan
+        $distDir = Join-Path $Root "dist"
+        & $deltaScript -CurrentDir $ClientDir -OutputDir $distDir -CurrentTag "v$version" -Arch $Arch -PreviousManifest $PreviousManifest -FetchRemotePrevious
+    }
+}

@@ -90,6 +90,159 @@ function Complete-MobiusInstall {
     }
 }
 
+
+function Get-FastFileSha256 {
+    param([string]$FilePath)
+    $hasher = [System.Security.Cryptography.SHA256]::Create()
+    $stream = $null
+    try {
+        $stream = [System.IO.File]::Open($FilePath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::Read)
+        $hashBytes = $hasher.ComputeHash($stream)
+        return ([System.BitConverter]::ToString($hashBytes) -replace '-', '').ToLowerInvariant()
+    } finally {
+        if ($stream) { $stream.Dispose() }
+        $hasher.Dispose()
+    }
+}
+
+function Apply-MobiusPatch {
+    param(
+        [string]$InstallDir,
+        [string]$PatchZip,
+        [string]$ExpectedFromTag,
+        [string]$ExpectedToTag
+    )
+
+    try {
+        Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue
+    } catch {}
+
+    if (-not (Test-Path $InstallDir)) { return $false }
+    if (-not (Test-Path $PatchZip)) { return $false }
+
+    $stagingDir = Join-Path ([System.IO.Path]::GetTempPath()) ('mobius-stage-' + [guid]::NewGuid().ToString('N'))
+    $backupDir = Join-Path $InstallDir '.update-backup'
+
+    try {
+        Write-Host 'Extracting incremental patch...' -ForegroundColor Cyan
+        [System.IO.Compression.ZipFile]::ExtractToDirectory($PatchZip, $stagingDir)
+
+        $manifestPath = Join-Path $stagingDir 'patch-manifest.json'
+        if (-not (Test-Path $manifestPath)) {
+            Write-Warning 'Incremental patch missing patch-manifest.json.'
+            return $false
+        }
+
+        $manifest = Get-Content $manifestPath -Raw | ConvertFrom-Json
+        if ($manifest.fromTag -and $ExpectedFromTag -and ($manifest.fromTag -ne '*') -and ($manifest.fromTag -ne $ExpectedFromTag)) {
+            Write-Warning "Patch targets $($manifest.fromTag), but local version is $ExpectedFromTag."
+            return $false
+        }
+
+        Write-Host 'Verifying patch payload integrity...' -ForegroundColor Cyan
+        $patchFiles = $manifest.files
+        $fileKeys = if ($patchFiles -is [System.Collections.IDictionary]) {
+            [string[]]$patchFiles.Keys
+        } else {
+            [string[]]($patchFiles.PSObject.Properties | ForEach-Object { $_.Name })
+        }
+
+        foreach ($rel in $fileKeys) {
+            $stagedFile = Join-Path $stagingDir ($rel.Replace('/', '\'))
+            if (-not (Test-Path $stagedFile)) {
+                Write-Warning "Staged file missing: $rel"
+                return $false
+            }
+            $expectedHash = if ($patchFiles -is [System.Collections.IDictionary]) { $patchFiles[$rel].sha256 } else { $patchFiles.$rel.sha256 }
+            $actualHash = Get-FastFileSha256 -FilePath $stagedFile
+            if ($actualHash -ne $expectedHash) {
+                Write-Warning "Hash check failed on $rel"
+                return $false
+            }
+        }
+
+        # Create safety backup
+        Write-Host 'Creating safety backup of modified files...' -ForegroundColor Cyan
+        if (Test-Path $backupDir) {
+            Remove-Item -LiteralPath $backupDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
+
+        foreach ($rel in $fileKeys) {
+            $destFile = Join-Path $InstallDir ($rel.Replace('/', '\'))
+            if (Test-Path -LiteralPath $destFile) {
+                $backupFile = Join-Path $backupDir ($rel.Replace('/', '\'))
+                $backupParent = Split-Path $backupFile -Parent
+                if (-not (Test-Path $backupParent)) { New-Item -ItemType Directory -Path $backupParent -Force | Out-Null }
+                Copy-Item -LiteralPath $destFile -Destination $backupFile -Force
+            }
+        }
+
+        if ($manifest.deleted) {
+            foreach ($rel in $manifest.deleted) {
+                $destFile = Join-Path $InstallDir ($rel.Replace('/', '\'))
+                if (Test-Path -LiteralPath $destFile) {
+                    $backupFile = Join-Path $backupDir ($rel.Replace('/', '\'))
+                    $backupParent = Split-Path $backupFile -Parent
+                    if (-not (Test-Path $backupParent)) { New-Item -ItemType Directory -Path $backupParent -Force | Out-Null }
+                    Copy-Item -LiteralPath $destFile -Destination $backupFile -Force
+                }
+            }
+        }
+
+        # Apply updates
+        Write-Host 'Applying differential updates...' -ForegroundColor Cyan
+        foreach ($rel in $fileKeys) {
+            $stagedFile = Join-Path $stagingDir ($rel.Replace('/', '\'))
+            $destFile = Join-Path $InstallDir ($rel.Replace('/', '\'))
+            $destParent = Split-Path $destFile -Parent
+            if (-not (Test-Path $destParent)) { New-Item -ItemType Directory -Path $destParent -Force | Out-Null }
+            Copy-Item -LiteralPath $stagedFile -Destination $destFile -Force
+        }
+
+        if ($manifest.deleted) {
+            foreach ($rel in $manifest.deleted) {
+                $destFile = Join-Path $InstallDir ($rel.Replace('/', '\'))
+                if (Test-Path -LiteralPath $destFile) {
+                    Remove-Item -LiteralPath $destFile -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
+
+        $mobiusExe = Join-Path $InstallDir 'Mobius.exe'
+        if (-not (Test-Path $mobiusExe)) {
+            throw 'Post-patch verification failed: Mobius.exe missing'
+        }
+
+        # Update tag file
+        $tagToRecord = if ($manifest.toTag) { $manifest.toTag } else { $ExpectedToTag }
+        Set-Content -LiteralPath (Join-Path $InstallDir '.mobius-installed-tag') -Value $tagToRecord -Encoding UTF8 -Force
+
+        # Clean up backup on success
+        Remove-Item -LiteralPath $backupDir -Recurse -Force -ErrorAction SilentlyContinue
+        return $true
+    } catch {
+        Write-Warning "Patch application error: $($_.Exception.Message)"
+        if (Test-Path $backupDir) {
+            Write-Host 'Restoring files from safety backup...' -ForegroundColor Yellow
+            $backedFiles = Get-ChildItem -LiteralPath $backupDir -Recurse -File
+            foreach ($bf in $backedFiles) {
+                $rel = $bf.FullName.Substring($backupDir.Length).TrimStart('\', '/')
+                $dest = Join-Path $InstallDir $rel
+                $destDir = Split-Path $dest -Parent
+                if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
+                Copy-Item -LiteralPath $bf.FullName -Destination $dest -Force
+            }
+            Remove-Item -LiteralPath $backupDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        return $false
+    } finally {
+        if (Test-Path $stagingDir) {
+            Remove-Item -LiteralPath $stagingDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 try {
     [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 } catch {}
@@ -181,6 +334,8 @@ $downloadUrl = $null
 $latestTag = $null
 $latestReleaseName = $null
 $latestPublishDate = $null
+$patchAsset = $null
+$fullAsset = $null
 
 try {
     $headers = @{ "User-Agent" = "Mobius-Installer-Windows" }
@@ -188,10 +343,26 @@ try {
     foreach ($rel in $releases) {
         $asset = $rel.assets | Where-Object { $_.name -like "Mobius-Setup-*-win32-$arch.exe" -or $_.name -like "MobiusSetup.exe" } | Select-Object -First 1
         if ($asset) {
+            $fullAsset = $asset
             $downloadUrl = $asset.browser_download_url
             $latestTag = $rel.tag_name
             $latestReleaseName = $rel.name
             $latestPublishDate = $rel.published_at
+
+            if ($rel.assets) {
+                if ($installedTag) {
+                    $patchAsset = $rel.assets | Where-Object {
+                        $_.name -like "Mobius-Patch-$installedTag-to-*-win32-$arch.zip" -or
+                        $_.name -like "Mobius-Patch-*$installedTag*win32-$arch.zip"
+                    } | Select-Object -First 1
+                }
+                if (-not $patchAsset) {
+                    $patchAsset = $rel.assets | Where-Object {
+                        $_.name -like "Mobius-Patch-win32-$arch.zip" -or
+                        $_.name -like "Mobius-Patch-*-win32-$arch.zip"
+                    } | Select-Object -First 1
+                }
+            }
             break
         }
     }
@@ -298,34 +469,70 @@ if ($isInstalled) {
 # 6-9. Install, verify the result, and always clean up the download.
 $targetDir = if ($installedPath) { $installedPath } else { Join-Path $env:LOCALAPPDATA "Programs\Mobius" }
 $mobiusExe = Join-Path $targetDir 'Mobius.exe'
-$tempInstaller = Join-Path $env:TEMP ("MobiusSetup-{0}.exe" -f [guid]::NewGuid())
-try {
-    Write-Host "Downloading Mobius installer ($latestTag)..." -ForegroundColor Cyan
-    Invoke-WebRequest -Uri $downloadUrl -OutFile $tempInstaller -UseBasicParsing
 
-    Write-Host "Running Mobius Setup (silent installation, please wait)..." -ForegroundColor Cyan
-    # Suppress Inno's own launch; only start the app after a verified success.
-    $installerArgs = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /MERGETASKS="!runcode" /DIR="' + $targetDir + '"'
-    $process = Start-Process -FilePath $tempInstaller -ArgumentList $installerArgs -PassThru
+$usedIncremental = $false
+if ($isInstalled -and (-not $Force) -and $patchAsset) {
+    Write-Host "`n[Incremental Update Available] Found differential patch: $($patchAsset.name)" -ForegroundColor Green
+    $patchSizeMb = if ($patchAsset.size) { [math]::Round($patchAsset.size / 1MB, 2) } else { 0 }
+    $fullSizeMb = if ($fullAsset -and $fullAsset.size) { [math]::Round($fullAsset.size / 1MB, 2) } else { 0 }
+    if ($patchSizeMb -gt 0 -and $fullSizeMb -gt 0) {
+        $savedPct = [math]::Round((1 - ($patchSizeMb / $fullSizeMb)) * 100, 1)
+        Write-Host "  - Patch Download Size: $patchSizeMb MB" -ForegroundColor Cyan
+        Write-Host "  - Full Installer Size: $fullSizeMb MB" -ForegroundColor DarkGray
+        Write-Host "  - Bandwidth Saved    : ~$savedPct%!" -ForegroundColor Green
+    } else {
+        Write-Host "  - Patch Download Size: $patchSizeMb MB" -ForegroundColor Cyan
+    }
+
+    $tempPatch = Join-Path $env:TEMP ("MobiusPatch-{0}.zip" -f [guid]::NewGuid())
     try {
-        $null = $process.Handle
-        # Wait for the installer itself, not its entire descendant process tree.
-        $process.WaitForExit()
-        if ($process.ExitCode -ne 0) {
-            throw "Mobius installation failed (exit code $($process.ExitCode)). Keep this terminal and retry."
+        Write-Host "Downloading Mobius incremental update ($latestTag)..." -ForegroundColor Cyan
+        Invoke-WebRequest -Uri $patchAsset.browser_download_url -OutFile $tempPatch -UseBasicParsing
+
+        $patchSuccess = Apply-MobiusPatch -InstallDir $targetDir -PatchZip $tempPatch -ExpectedFromTag $installedTag -ExpectedToTag $latestTag
+        if ($patchSuccess) {
+            $usedIncremental = $true
+            Write-Host "Incremental update applied successfully!" -ForegroundColor Green
+        } else {
+            Write-Warning "Incremental update could not be applied cleanly. Falling back to full installer..."
         }
+    } catch {
+        Write-Warning "Incremental update failed: $($_.Exception.Message). Falling back to full installer..."
     } finally {
-        $process.Dispose()
+        Remove-Item -LiteralPath $tempPatch -Force -ErrorAction SilentlyContinue
     }
-    if (-not (Test-Path -LiteralPath $mobiusExe -PathType Leaf)) {
-        throw "Installer exited but $mobiusExe was not found. Update was not recorded; retry installation."
+}
+
+if (-not $usedIncremental) {
+    $tempInstaller = Join-Path $env:TEMP ("MobiusSetup-{0}.exe" -f [guid]::NewGuid())
+    try {
+        Write-Host "Downloading Mobius installer ($latestTag)..." -ForegroundColor Cyan
+        Invoke-WebRequest -Uri $downloadUrl -OutFile $tempInstaller -UseBasicParsing
+
+        Write-Host "Running Mobius Setup (silent installation, please wait)..." -ForegroundColor Cyan
+        # Suppress Inno's own launch; only start the app after a verified success.
+        $installerArgs = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /MERGETASKS="!runcode" /DIR="' + $targetDir + '"'
+        $process = Start-Process -FilePath $tempInstaller -ArgumentList $installerArgs -PassThru
+        try {
+            $null = $process.Handle
+            # Wait for the installer itself, not its entire descendant process tree.
+            $process.WaitForExit()
+            if ($process.ExitCode -ne 0) {
+                throw "Mobius installation failed (exit code $($process.ExitCode)). Keep this terminal and retry."
+            }
+        } finally {
+            $process.Dispose()
+        }
+        if (-not (Test-Path -LiteralPath $mobiusExe -PathType Leaf)) {
+            throw "Installer exited but $mobiusExe was not found. Update was not recorded; retry installation."
+        }
+        Set-Content -LiteralPath (Join-Path $targetDir '.mobius-installed-tag') -Value $latestTag -Encoding UTF8 -Force
+    } catch {
+        $global:LASTEXITCODE = 1
+        throw
+    } finally {
+        Remove-Item -LiteralPath $tempInstaller -Force -ErrorAction SilentlyContinue
     }
-    Set-Content -LiteralPath (Join-Path $targetDir '.mobius-installed-tag') -Value $latestTag -Encoding UTF8 -Force
-} catch {
-    $global:LASTEXITCODE = 1
-    throw
-} finally {
-    Remove-Item -LiteralPath $tempInstaller -Force -ErrorAction SilentlyContinue
 }
 
 # 10. Match VS Code's CLI launch: Electron must not attach to this console.
@@ -340,9 +547,10 @@ try {
 }
 
 if ($isInstalled) {
+    $updateMethod = if ($usedIncremental) { " (incremental patch)" } else { "" }
     $successTitle = 'Mobius updated successfully'
-    $successMessage = "Updated to $latestTag. Extensions, settings and workspace data preserved."
-    Write-Host "`n[Success] Mobius updated successfully ($latestTag)!" -ForegroundColor Green
+    $successMessage = "Updated to $latestTag$updateMethod. Extensions, settings and workspace data preserved."
+    Write-Host "`n[Success] Mobius updated successfully ($latestTag)$updateMethod!" -ForegroundColor Green
     Write-Host "Extensions, settings and workspace data preserved." -ForegroundColor DarkGray
 } else {
     $successTitle = 'Mobius installed successfully'

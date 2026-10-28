@@ -95,6 +95,9 @@ jobs:
           $clientDir = "VSCode-win32-$arch"
           if (Test-Path $clientDir) {
             Compress-Archive -Path "$clientDir\*" -DestinationPath "dist\Mobius-${version}-win32-${arch}.zip" -Force
+            $tag = "${{ inputs.release_tag || github.ref_name }}"
+            if (-not $tag -or $tag -notlike 'v*') { $tag = "v$version" }
+            powershell -ExecutionPolicy Bypass -Command "& './scripts/generate-delta.ps1' -CurrentDir '$clientDir' -OutputDir dist -CurrentTag '$tag' -Arch '$arch' -FetchRemotePrevious"
           }
 
       - name: Generate Checksums
