@@ -2,12 +2,19 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execSync } from 'node:child_process';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const destination = process.argv[2];
 if (!destination) { throw new Error('Usage: node scripts/stage-superagent.mjs <client-root>'); }
 const target = path.resolve(destination);
 if (target === root) { throw new Error('Staging destination must differ from the source repository'); }
 const upstream = path.join(root, 'dsh-superagent-prototype');
+if (!fs.existsSync(path.join(upstream, 'src/core/engine.ts'))) {
+	try {
+		console.log('dsh-superagent-prototype missing, attempting git submodule update --init dsh-superagent-prototype...');
+		execSync('git submodule update --init dsh-superagent-prototype', { cwd: root, stdio: 'inherit' });
+	} catch {}
+}
 if (!fs.existsSync(path.join(upstream, 'src/core/engine.ts'))) { throw new Error('Initialize dsh-superagent-prototype before packaging'); }
 fs.mkdirSync(path.join(target, 'scripts/superagent'), { recursive: true });
 for (const file of ['cli.mjs', 'agent.mjs', 'runtime.mjs', 'core.mjs']) {
