@@ -108,6 +108,8 @@ echo -e "Version:     ${GREEN}$VERSION${NC}"
 echo -e "Arch:        ${GREEN}$ARCH${NC} ($MAC_ARCH_LABEL)"
 
 # =========================================================================
+node "$ROOT/scripts/stage-superagent.mjs" "$APP_PATH/Contents"
+
 # Step 1.5: Fix Permissions & Apply Ad-hoc Code Signature for macOS
 # =========================================================================
 # Note: On macOS Apple Silicon (arm64), any modified or unsigned Mach-O binary

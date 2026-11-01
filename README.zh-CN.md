@@ -21,6 +21,8 @@
 
 ## 为什么是 Mobius
 
+**后台主动编码：** [Super Agent 集成](docs/super-agent.md) 会依据项目资料和书面规则主动发现任务，在独立 Git worktree 中并行运行多个智能体，验证后生成可审阅的本地提交。命令面板执行 **Mobius: Start Autonomous Background Coding** 即可启动，复用 Mobius 当前配置的模型，需要 Node.js 24。机器保持运行时，关闭 IDE 后后台进程仍可继续工作。
+
 绝大多数 AI IDE 是无状态的：每次对话都是一个全新的 prompt，关掉标签页，"Agent"就把一切都忘了。
 
 Mobius 不一样。它是一个 **ADE — Agentic Development Environment（智能体开发环境）**，围绕一个核心理念构建：

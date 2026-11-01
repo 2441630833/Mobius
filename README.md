@@ -21,6 +21,8 @@
 
 ## Why Mobius
 
+**Continuous background coding:** [Super Agent integration](docs/super-agent.md) discovers useful project work under written rules, runs parallel agents in independent Git worktrees, and keeps verified local commits ready for review. Start it from **Mobius: Start Autonomous Background Coding**; it reuses the active configured Mobius model and requires Node.js 24. The background process can continue after the IDE closes while the machine remains awake.
+
 Most AI IDEs are stateless: every conversation is a brand-new prompt, and when you close the tab, the "Agent" forgets everything.
 
 Mobius is different. It is an **ADE — Agentic Development Environment** — built around one core idea:

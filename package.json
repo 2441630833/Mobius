@@ -4,6 +4,8 @@
   "description": "AI-powered IDE — VS Code OSS + Continue",
   "private": true,
   "scripts": {
+    "superagent": "node scripts/superagent/cli.mjs",
+    "superagent:test": "node --test scripts/superagent/*.test.mjs",
     "start": "powershell -ExecutionPolicy Bypass -File scripts/launch-ide.ps1",
     "dev": "powershell -ExecutionPolicy Bypass -File scripts/launch-ide.ps1",
     "build": "npm run build:vscode",

@@ -213,6 +213,11 @@ if ($env:SKIP_ECC_STAGE -ne "1") {
     Write-Host "`n=== ECC payload (skipped: SKIP_ECC_STAGE=1) ===" -ForegroundColor Yellow
 }
 
+Invoke-Step "Stage Super Agent background runtime" {
+    & node "$Root\scripts\stage-superagent.mjs" (Join-Path $Root "VSCode-win32-$Arch")
+    if ($LASTEXITCODE -ne 0) { throw "Super Agent payload staging failed" }
+}
+
 Push-Location $VsCodeDir
 $env:NODE_OPTIONS = "--experimental-strip-types"
 $env:VSCODE_SKIP_NODE_VERSION_CHECK = "1"

@@ -88,6 +88,8 @@ echo "Verifying packaged terminal on linux-$ARCH..."
 ELECTRON_RUN_AS_NODE=1 "$CLIENT_DIR/$APP_NAME" "$SCRIPT_DIR/verify-linux-terminal.cjs" "$CLIENT_DIR" "$ARCH"
 
 # =========================================================================
+node "$ROOT/scripts/stage-superagent.mjs" "$CLIENT_DIR"
+
 # Step 2: Build Debian .deb Package
 # =========================================================================
 echo -e "\n${CYAN}--- Step 2: Packaging Ubuntu / Debian .deb ---${NC}"
