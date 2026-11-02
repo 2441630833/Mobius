@@ -358,19 +358,12 @@ try {
             $latestReleaseName = $rel.name
             $latestPublishDate = $rel.published_at
 
-            if ($rel.assets) {
-                if ($installedTag) {
-                    $patchAsset = $rel.assets | Where-Object {
-                        $_.name -like "Mobius-Patch-$installedTag-to-*-win32-$arch.zip" -or
-                        $_.name -like "Mobius-Patch-*$installedTag*win32-$arch.zip"
-                    } | Select-Object -First 1
-                }
-                if (-not $patchAsset) {
-                    $patchAsset = $rel.assets | Where-Object {
-                        $_.name -like "Mobius-Patch-win32-$arch.zip" -or
-                        $_.name -like "Mobius-Patch-*-win32-$arch.zip"
-                    } | Select-Object -First 1
-                }
+            if ($rel.assets -and $installedTag -and $latestTag) {
+                # Never download a patch for another base or destination release.
+                # Unknown/generic patch names use the full installer instead.
+                $patchAsset = $rel.assets | Where-Object {
+                    $_.name -eq "Mobius-Patch-$installedTag-to-$latestTag-win32-$arch.zip"
+                } | Select-Object -First 1
             }
             break
         }
