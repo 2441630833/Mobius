@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mobius · Super Agent</title>
+<style>
+:root{color-scheme:dark}body{font:15px/1.6 system-ui;background:#12151c;color:#e5e9f0;max-width:1040px;margin:36px auto;padding:0 24px}header{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}h1{margin:0}p{color:#aebacd}button{font:inherit;padding:8px 14px;border:1px solid #435269;border-radius:7px;background:#222c3b;color:inherit;cursor:pointer;margin:4px}button:hover{background:#35465d}button:disabled{opacity:.5;cursor:wait}.primary{background:#4d4097}article{background:#1d2532;border:1px solid #2d394c;border-radius:10px;padding:18px;margin:12px 0}h3{margin:0 0 8px}pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#b4c6df;font-size:13px}#state{padding:12px;background:#1d2532;border-radius:8px}#error{color:#ffb2a6}small{color:#aebacd}.empty{padding:18px;color:#9daabe}details{margin-top:10px}
+</style>
+<header><div><small>MOBIUS / SUPER AGENT</small><h1>后台主动编码</h1></div><nav><button class="primary" data-action="auto">开始 / 恢复</button><button data-action="pause">暂停新任务</button><button data-action="stop">停止服务</button></nav></header>
+<p>依据项目资料和规则主动发现工作，多智能体独立执行，验证后提交到本地审阅分支。</p>
+<div id="state" role="status">读取状态…</div><p id="error" role="alert"></p>
+<h2>需要你处理 <small>Needs Your Attention</small></h2><section id="attention"></section>
+<h2>执行中的任务与成果</h2><section id="tasks"></section>
+<h2>发现的改进机会</h2><section id="proposals"></section>
+<script>
+const token='__CONTROL_TOKEN__';
+const modes={auto:'主动编码已开启',paused:'已暂停新任务',observe:'仅观察，不修改代码'};
+const labels={review:'待审阅',blocked:'需要处理',failed:'执行失败',queued:'排队中',working:'执行中',idle:'等待中',ended:'已结束',person:'等待处理',delivery:'待交付',answer:'等待答复'};
+const node=(tag,text)=>{const el=document.createElement(tag);el.textContent=text;return el};
+async function control(action,id){document.getElementById('error').textContent='';try{const r=await fetch('/control',{method:'POST',headers:{'Content-Type':'application/json','X-Mobius-Control':token},body:JSON.stringify({action,id})});const result=await r.json();if(!r.ok)throw Error(result.error||'操作失败');if(action==='stop'){document.getElementById('state').textContent='服务正在停止，已有工作目录和成果会保留';return}await update()}catch(e){document.getElementById('error').textContent=e.message}}
+document.querySelectorAll('[data-action]').forEach(button=>button.onclick=()=>control(button.dataset.action));
+function section(id,items,render,empty){const el=document.getElementById(id);el.replaceChildren();if(!items.length){el.append(node('div',empty));el.firstChild.className='empty'}else items.forEach(item=>{const card=node('article','');render(card,item);el.append(card)})}
+async function update(){try{const r=await fetch('/status');if(!r.ok)throw Error('状态不可用');const s=await r.json();document.getElementById('state').textContent=(modes[s.mode]||s.mode)+' · '+s.active+' 个智能体执行中 · '+s.pending+' 个任务排队';
+section('attention',s.attention,(card,item)=>{card.append(node('h3',labels[item.kind]||item.kind),node('div',item.summary));const done=node('button','已处理');done.onclick=()=>control('acknowledge',item.id);card.append(done);if(['blocked','failed'].includes(item.kind)&&s.tickets.some(t=>t.id===item.id)){const retry=node('button','重试此任务');retry.onclick=()=>control('retry',item.id);card.append(retry)}},'目前没有需要你处理的事项。');
+section('tasks',s.tickets,(card,item)=>{card.append(node('h3',item.title),node('small',labels[item.stage.action||item.stage.stage]||item.stage.stage));if(item.report)card.append(node('p',item.report.summary));if(item.execution){const d=node('details','');d.append(node('summary','查看审阅分支与工作目录'),node('pre',[item.execution.branch,item.execution.commit,item.execution.worktree].filter(Boolean).join('\n')));card.append(d)}},'尚无执行任务。开启主动编码后，发现的合适任务会在这里显示。');
+section('proposals',s.proposals,(card,item)=>{card.append(node('h3',item.title),node('div',item.task),node('small','依据：'+item.evidence))},'尚未发现值得执行的改进，后台会按照规则继续观察。');
+}catch{document.getElementById('state').textContent='后台服务未运行或暂时不可连接；可从 Mobius 的 Super Agent 入口启动。'}}
+update();setInterval(update,5000);
+</script></html>

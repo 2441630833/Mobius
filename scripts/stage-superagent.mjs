@@ -17,7 +17,7 @@ if (!fs.existsSync(path.join(upstream, 'src/core/engine.ts'))) {
 }
 if (!fs.existsSync(path.join(upstream, 'src/core/engine.ts'))) { throw new Error('Initialize dsh-superagent-prototype before packaging'); }
 fs.mkdirSync(path.join(target, 'scripts/superagent'), { recursive: true });
-for (const file of ['cli.mjs', 'agent.mjs', 'runtime.mjs', 'core.mjs']) {
+for (const file of ['cli.mjs', 'agent.mjs', 'runtime.mjs', 'core.mjs', 'panel.html']) {
 	fs.copyFileSync(path.join(root, 'scripts/superagent', file), path.join(target, 'scripts/superagent', file));
 }
 fs.mkdirSync(path.join(target, 'dsh-superagent-prototype/src'), { recursive: true });

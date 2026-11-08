@@ -37,7 +37,6 @@ function init() {
 		writeJson(configPath, config);
 	}
 }
-const panel = `<!doctype html><meta charset="utf-8"><title>Mobius Background Coding</title><style>body{font:16px system-ui;background:#10151d;color:#e0e6ef;max-width:1000px;margin:40px auto;padding:20px}article{background:#1b2532;padding:18px;margin:12px 0;border-radius:10px}pre{white-space:pre-wrap;overflow-wrap:anywhere}small{color:#9caec3}</style><h1>Mobius · Background Coding</h1><p id="state"></p><h2>Needs Your Attention</h2><section id="attention"></section><h2>Tasks & Review Branches</h2><section id="tasks"></section><h2>Observed Opportunities</h2><section id="proposals"></section><script>async function update(){try{const s=await(await fetch('/status')).json();document.getElementById('state').textContent=s.mode+' · '+s.active+' running · '+s.pending+' queued';for(const [target,items] of [['attention',s.attention],['tasks',s.tickets],['proposals',s.proposals]]){const el=document.getElementById(target);el.replaceChildren();for(const item of items){const card=document.createElement('article');const pre=document.createElement('pre');pre.textContent=JSON.stringify(item,null,2);card.append(pre);el.append(card)}}}catch{document.getElementById('state').textContent='Background service offline'}}update();setInterval(update,5000)</script>`;
 
 async function daemon() {
 	init();
@@ -53,14 +52,45 @@ async function daemon() {
 	let supervisor, server, timer, stopping = false, tick;
 	try {
 		modelFromEnvironment();
-		supervisor = new Supervisor({ root, stateDir });
-		server = http.createServer((req, res) => {
+		supervisor = new Supervisor({ root, stateDir, discoveryEnabled: !args.includes('--chat-only') });
+		server = http.createServer(async (req, res) => {
 			if (req.headers.host !== `127.0.0.1:${server.address().port}`) { res.writeHead(403).end(); return; }
+			if (req.method === 'POST' && req.url === '/chat') {
+				req.setEncoding('utf8');
+				const origin = `http://127.0.0.1:${server.address().port}`;
+				if (req.headers.origin !== origin || req.headers['x-mobius-control'] !== nonce) { res.writeHead(403).end(); return; }
+				res.setHeader('Content-Type', 'application/json');
+				try {
+					let body = ''; for await (const chunk of req) { body += chunk; if (body.length > 300000) { throw new Error('Request too large'); } }
+					const { model, ...request } = JSON.parse(body);
+					const selectedModel = model ? modelFromEnvironment({ AI_MODEL: model.model, AI_API_KEY: model.apiKey, AI_BASE_URL: model.base }) : undefined;
+					res.end(JSON.stringify(await supervisor.chat(request, selectedModel)));
+				} catch (error) { res.writeHead(400).end(JSON.stringify({ error: error.message })); }
+				return;
+			}
+			if (req.method === 'POST' && req.url === '/control') {
+				const origin = `http://127.0.0.1:${server.address().port}`;
+				if (req.headers.origin !== origin || req.headers['x-mobius-control'] !== nonce) { res.writeHead(403).end(); return; }
+				res.setHeader('Content-Type', 'application/json');
+				try {
+					let body = ''; for await (const chunk of req) { body += chunk; if (body.length > 4096) { throw new Error('Request too large'); } }
+					const { action, id } = JSON.parse(body);
+					if (['pause', 'auto', 'observe'].includes(action)) {
+						const c = readJson(configPath); c.mode = action === 'pause' ? 'paused' : action; supervisor.config = validateConfig(c); writeJson(configPath, c);
+						if (action === 'auto') { supervisor.discoveryEnabled = true; }
+					} else if (action === 'stop') { stopping = true; void supervisor.stop(); }
+					else if (action === 'acknowledge' && typeof id === 'string') { supervisor.store.delete('attention', id); }
+					else if (action === 'retry' && typeof id === 'string' && !supervisor.active.has(id)) { supervisor.engine.retryTicket(id); supervisor.store.delete('attention', id); }
+					else { throw new Error('Unknown action or task is still running'); }
+					res.end(JSON.stringify({ ok: true }));
+				} catch (error) { res.writeHead(400).end(JSON.stringify({ error: error.message })); }
+				return;
+			}
 			if (req.method !== 'GET' || !['/', '/status'].includes(req.url)) { res.writeHead(404).end(); return; }
 			res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Content-Type-Options', 'nosniff');
 			res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'");
 			res.setHeader('Content-Type', req.url === '/' ? 'text/html; charset=utf-8' : 'application/json');
-			res.end(req.url === '/' ? panel : JSON.stringify(supervisor.snapshot()));
+			res.end(req.url === '/' ? fs.readFileSync(new URL('./panel.html', import.meta.url), 'utf8').replace('__CONTROL_TOKEN__', nonce) : JSON.stringify(supervisor.snapshot()));
 		});
 		await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
 		const url = `http://127.0.0.1:${server.address().port}`;
@@ -85,7 +115,7 @@ async function daemon() {
 						} catch (error) { supervisor.notify('control', 'failed', error.message); }
 					}
 				}
-				writeJson(snapshotPath, { ...supervisor.snapshot(), url, pid: process.pid });
+				writeJson(snapshotPath, { ...supervisor.snapshot(), url, pid: process.pid, updatedAt: Date.now() });
 			} catch (error) { supervisor.notify('host', 'failed', error.message); stop(); }
 		}, 1000);
 		while (!stopping) {
@@ -103,11 +133,38 @@ async function daemon() {
 
 try {
 	if (action === 'run') { await daemon(); }
+	else if (action === 'chat') {
+		const input = args[args.indexOf('--request') + 1];
+		const output = args[args.indexOf('--response') + 1];
+		if (!args.includes('--request') || !args.includes('--response')) { throw new Error('Supply request and response paths'); }
+		try {
+			const request = readJson(input);
+			init();
+			if (!owner()?.url) {
+				modelFromEnvironment();
+				const log = fs.openSync(path.join(stateDir, 'host.log'), 'a', 0o600);
+				const child = spawn(process.execPath, [fileURLToPath(import.meta.url), 'run', '--chat-only', '--repo', root], { detached: true, windowsHide: true, stdio: ['ignore', log, log], env: process.env });
+				child.on('error', () => {}); child.unref(); fs.closeSync(log);
+				for (let i = 0; i < 100 && !owner()?.url; i++) { await delay(100); }
+			}
+			const current = owner();
+			if (!current?.url || !/^http:\/\/127\.0\.0\.1:\d+$/.test(current.url)) { throw new Error('Background host failed to start; inspect host.log'); }
+			const response = await fetch(`${current.url}/chat`, { method: 'POST', signal: AbortSignal.timeout(45000), headers: { Origin: current.url, 'X-Mobius-Control': current.nonce, 'Content-Type': 'application/json' }, body: JSON.stringify({ ...request, model: modelFromEnvironment() }) });
+			writeJson(output, await response.json());
+		} catch (error) { writeJson(output, { error: error.message }); }
+	}
 	else if (action === 'init') { init(); console.log(configPath); }
 	else if (action === 'start') {
 		init();
 		if (args.includes('--auto')) { const c = readJson(configPath); c.mode = 'auto'; writeJson(configPath, validateConfig(c)); }
-		if (owner()) { console.log(`Already running: ${owner().url}`); }
+		if (owner()) {
+			if (args.includes('--auto')) {
+				const current = owner();
+				const response = await fetch(`${current.url}/control`, { method: 'POST', headers: { Origin: current.url, 'X-Mobius-Control': current.nonce }, body: JSON.stringify({ action: 'auto' }), signal: AbortSignal.timeout(5000) });
+				if (!response.ok) { throw new Error('Could not enable autonomous discovery'); }
+			}
+			console.log(`Already running: ${owner().url}`);
+		}
 		else {
 			modelFromEnvironment();
 			const log = fs.openSync(path.join(stateDir, 'host.log'), 'a', 0o600);
