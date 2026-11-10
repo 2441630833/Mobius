@@ -66,3 +66,7 @@ chip-design/**/*.pyc
 
 # Agent workspace memory: generated locally by the assistant, not part of the IDE source
 .workbuddy/memory/
+
+# Local toolchain downloads (Godot, MinGW, openXC7, OSS CAD Suite) fetched per host.
+# About 5.5 GB of host-specific binaries; they belong to the machine, not the repo.
+tools/*/
