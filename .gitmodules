@@ -55,3 +55,6 @@
 [submodule "dsh-superagent-prototype"]
 	path = dsh-superagent-prototype
 	url = https://github.com/deepseek-ai/dsh-superagent-prototype.git
+[submodule "headroom"]
+	path = headroom
+	url = https://github.com/headroomlabs-ai/headroom.git
