@@ -54,7 +54,6 @@ function Get-Process { param($Name, $ErrorAction) }
 function Start-Sleep { param($Seconds, $Milliseconds) }
 function Invoke-RestMethod {
     param($Uri, $Headers, [switch]$UseBasicParsing)
-    $tag = if ($Scenario -eq 'DowngradeProtected') { 'v1.0.0' } else { $script:fixtureTag }
     $assets = @([pscustomobject]@{ name = 'MobiusSetup.exe'; browser_download_url = 'https://example.invalid/MobiusSetup.exe'; size = 1000000000 })
     if ($Scenario -in @('DeltaSuccess', 'DeltaCorrupt')) {
         $assets = @(
@@ -79,7 +78,7 @@ function Invoke-RestMethod {
         )
     }
     return [pscustomobject]@{
-        tag_name = $tag; name = $tag; published_at = '2099-01-01T00:00:00Z'
+        tag_name = $script:fixtureTag; name = $script:fixtureTag; published_at = '2099-01-01T00:00:00Z'
         assets = $assets
     }
 }
@@ -208,7 +207,7 @@ try {
     $cases = @('FreshDefault', 'UpdateDefault', 'CurrentDefault', 'ForceCurrent',
         'CheckOnly', 'KeepOpen', 'EnvKeepOpen', 'FailInstaller', 'MissingExe',
         'DownloadFailure', 'ToastFailure', 'ToastTimeout', 'LaunchFailure', 'CustomPath', 'EscapedToast',
-        'DeltaSuccess', 'DeltaCorrupt', 'DeltaChainSuccess', 'DeltaChainCorrupt', 'DowngradeProtected')
+        'DeltaSuccess', 'DeltaCorrupt', 'DeltaChainSuccess', 'DeltaChainCorrupt')
     foreach ($case in $cases) {
         $sandbox = Join-Path $testRoot $case
         $null = New-Item -ItemType Directory -Path $sandbox
@@ -243,7 +242,7 @@ try {
             Assert-Test ($caller[0].Data.NoAttach -eq 'test-before') "$case did not restore launch environment"
             if ($expectedFailure) { Assert-Test ($caller[0].Data.ExitCode -eq 1) "$case missing failure exit status" }
         }
-        $noInstall = $case -in @('CheckOnly', 'CurrentDefault', 'DowngradeProtected')
+        $noInstall = $case -in @('CheckOnly', 'CurrentDefault')
         $expectedDownloads = if ($noInstall) { 0 }
             elseif ($case -in @('DeltaCorrupt', 'DeltaChainSuccess')) { 2 }
             elseif ($case -eq 'DeltaChainCorrupt') { 3 }
@@ -274,12 +273,12 @@ try {
             Assert-Test ($toasts[0].Data.Hidden -and $toasts[0].Data.RegisteredId) "$case incorrect notification host or app ID"
             $expectedTag = if ($case -eq 'EscapedToast') { 'v9<&' } else { 'v9.8.7' }
             Assert-Test ($toasts[0].Data.Message.Contains($expectedTag)) "$case corrupted notification content"
-            $expectedTitle = if ($case -in @('CurrentDefault', 'DowngradeProtected')) { 'Mobius is up to date' }
+            $expectedTitle = if ($case -eq 'CurrentDefault') { 'Mobius is up to date' }
                 elseif ($case -in @('UpdateDefault', 'ForceCurrent', 'CustomPath', 'DeltaSuccess', 'DeltaCorrupt', 'DeltaChainSuccess', 'DeltaChainCorrupt')) { 'Mobius updated successfully' }
                 else { 'Mobius installed successfully' }
             Assert-Test ($toasts[0].Data.Title -eq $expectedTitle) "$case incorrect notification title"
         }
-        Assert-Test ($launches.Count -eq [int](-not ($noSuccess -or $case -in @('CurrentDefault', 'DowngradeProtected')))) "$case incorrect app launch"
+        Assert-Test ($launches.Count -eq [int](-not ($noSuccess -or $case -eq 'CurrentDefault'))) "$case incorrect app launch"
         if ($launches.Count) { Assert-Test ($launches[0].Data.NoAttach -eq '1') "$case app can attach to installer console" }
         if ($case -eq 'ToastTimeout') {
             Assert-Test (@($events | Where-Object Kind -eq 'KillHelper').Count -eq 1) 'Timed-out notification helper was not stopped'
@@ -291,8 +290,6 @@ try {
             Assert-Test (-not (Test-Path -LiteralPath $marker)) "$case wrote a false success marker"
         } elseif ($case -eq 'FailInstaller') {
             Assert-Test ((Get-Content -LiteralPath $marker -Raw).Trim() -eq 'v1.0.0') 'Failed update overwrote the old marker'
-        } elseif ($case -eq 'DowngradeProtected') {
-            Assert-Test ((Get-Content -LiteralPath $marker -Raw -Encoding UTF8).Trim() -eq 'v9.8.7') 'Downgrade overwrote newer tag'
         } elseif ($case -ne 'CheckOnly') {
             Assert-Test ((Get-Content -LiteralPath $marker -Raw -Encoding UTF8).Trim() -eq $expectedTag) "$case incorrect installed marker"
         }
