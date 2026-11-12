@@ -30,6 +30,7 @@ param(
     [string]$Ref = 'main',
     [string]$ReleaseTag = '',
     [string]$Arch = 'x64',
+    [string]$Platform = 'all',
     [string]$InstallerTarget = 'user',
     [switch]$SystemTarget,
     [long]$RunId = 0,
@@ -131,10 +132,17 @@ function Show-Status {
 }
 
 function Start-Dispatch {
-    $body = @{ ref = $Ref; inputs = @{ arch = $Arch; target = $InstallerTarget } }
-    if ($ReleaseTag) { $body.inputs.release_tag = $ReleaseTag }
+    $inputs = @{}
+    if ($Workflow -eq 'build-all-platforms.yml') {
+        $inputs['platform'] = $Platform
+    } else {
+        if ($Arch) { $inputs['arch'] = $Arch }
+        if ($InstallerTarget) { $inputs['target'] = $InstallerTarget }
+        if ($ReleaseTag) { $inputs['release_tag'] = $ReleaseTag }
+    }
+    $body = @{ ref = $Ref; inputs = $inputs }
     Invoke-GhApi -Method 'POST' -Path "/repos/$Repo/actions/workflows/$Workflow/dispatches" -Body $body | Out-Null
-    Write-Host ("Dispatched {0} on ref '{1}' (arch={2}, target={3}, release_tag='{4}')" -f $Workflow, $Ref, $Arch, $InstallerTarget, $ReleaseTag) -ForegroundColor Green
+    Write-Host ("Dispatched {0} on ref '{1}' with inputs {2}" -f $Workflow, $Ref, ($inputs | ConvertTo-Json -Compress)) -ForegroundColor Green
     Start-Sleep -Seconds 6
     Show-Status
 }
