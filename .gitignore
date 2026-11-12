@@ -70,3 +70,11 @@ chip-design/**/*.pyc
 # Local toolchain downloads (Godot, MinGW, openXC7, OSS CAD Suite) fetched per host.
 # About 5.5 GB of host-specific binaries; they belong to the machine, not the repo.
 tools/*/
+
+# One-off, host-specific investigation scripts from the groot / Dex1 asset hunts.
+# They hardcode internal host paths and login details, and are only meaningful on
+# the machine that ran the investigation, so they stay off the repo.
+# The maintained helper is tools/ssh_exec.py (credentials come from GR_PASS).
+tools/*.sh
+tools/*.py
+!tools/ssh_exec.py
