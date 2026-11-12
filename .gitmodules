@@ -46,13 +46,6 @@
 	path = vendor/openFPGALoader
 	url = https://github.com/trabucayre/openFPGALoader.git
 	update = none
-[submodule "Claude-Code-Game-Studios"]
-	path = Claude-Code-Game-Studios
-	url = https://github.com/Donchitos/Claude-Code-Game-Studios.git
-[submodule "godogen"]
-	path = godogen
-	url = https://github.com/htdt/godogen.git
-
 [submodule "ECC"]
 	path = ECC
 	url = https://github.com/affaan-m/ECC.git
