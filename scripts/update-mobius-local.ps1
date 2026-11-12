@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
     一条命令把本机 Mobius 更新到 GitHub 上的最新发布。
@@ -97,27 +97,67 @@ if (-not (Test-Path -LiteralPath (Join-Path $InstallDir 'Mobius.exe'))) {
 }
 $InstallDir = (Resolve-Path -LiteralPath $InstallDir).Path
 $currentVersion = Get-InstalledVersion -Dir $InstallDir
+$currentTag = $null
+$tagFile = Join-Path $InstallDir '.mobius-installed-tag'
+if (Test-Path -LiteralPath $tagFile) {
+    try { $currentTag = (Get-Content -LiteralPath $tagFile -Raw -Encoding UTF8).Trim() } catch {}
+}
+if (-not $currentTag -and $currentVersion) {
+    $currentTag = if ($currentVersion -match '^v') { $currentVersion } else { "v$currentVersion" }
+}
 
 Write-Step "release"
-$release = if ($Tag) { Invoke-GhApi -Path "/repos/$Repo/releases/tags/$Tag" } else { Invoke-GhApi -Path "/repos/$Repo/releases/latest" }
+$allReleases = Invoke-GhApi -Path "/repos/$Repo/releases"
+$release = if ($Tag) {
+    @($allReleases) | Where-Object { $_.tag_name -eq $Tag } | Select-Object -First 1
+} else {
+    @($allReleases) | Select-Object -First 1
+}
+if (-not $release) {
+    $release = if ($Tag) { Invoke-GhApi -Path "/repos/$Repo/releases/tags/$Tag" } else { Invoke-GhApi -Path "/repos/$Repo/releases/latest" }
+}
 $Tag = $release.tag_name
 Write-Host ("  target : {0}  (published {1})" -f $Tag, $release.published_at)
 Write-Host ("  install: {0}" -f $InstallDir)
-Write-Host ("  current: {0}" -f ($(if ($currentVersion) { $currentVersion } else { 'unknown' })))
+Write-Host ("  current: {0} ({1})" -f ($(if ($currentVersion) { $currentVersion } else { 'unknown' })), ($(if ($currentTag) { $currentTag } else { 'no tag' })))
 
-$patchAsset = $release.assets | Where-Object { $_.name -like 'Mobius-Patch-*-win32-x64.zip' } | Select-Object -First 1
-$setupAsset = $release.assets | Where-Object { $_.name -eq 'MobiusSetup.exe' } | Select-Object -First 1
+$patchChain = if ($currentTag -and $Tag -and ($currentTag -ne $Tag)) {
+    Find-MobiusPatchChain -Releases @($allReleases) -FromTag $currentTag -ToTag $Tag -Arch 'x64'
+} else { $null }
+
+$patchAsset = if ($patchChain -and $patchChain.Count -gt 0) { $patchChain[0].Asset } else {
+    $release.assets | Where-Object { $_.name -like 'Mobius-Patch-*-win32-x64.zip' } | Select-Object -First 1
+}
+$setupAsset = $release.assets | Where-Object { $_.name -like 'Mobius-Setup-*-win32-x64.exe' -or $_.name -eq 'MobiusSetup.exe' } | Select-Object -First 1
 $sumsAsset = $release.assets | Where-Object { $_.name -eq 'SHA256SUMS.txt' } | Select-Object -First 1
 
 switch ($Mode) {
-    'patch' { if (-not $patchAsset) { throw "Release $Tag has no patch asset." } }
-    'setup' { if (-not $setupAsset) { throw "Release $Tag has no MobiusSetup.exe asset." } }
+    'patch' {
+        if (-not $patchChain -and -not $patchAsset) {
+            throw "No patch path found from $currentTag to $Tag, and release has no direct patch asset."
+        }
+    }
+    'setup' {
+        if (-not $setupAsset) { throw "Release $Tag has no setup asset." }
+    }
     'auto' {
-        if (-not $patchAsset -and -not $setupAsset) { throw "Release $Tag has no usable asset." }
+        if (-not $patchChain -and -not $patchAsset -and -not $setupAsset) {
+            throw "Release $Tag has no usable asset."
+        }
     }
 }
 
-Write-Host ("  patch  : {0}" -f ($(if ($patchAsset) { "{0} ({1:N1} MB)" -f $patchAsset.name, ($patchAsset.size / 1MB) } else { 'not published' })))
+if ($patchChain -and $patchChain.Count -gt 1) {
+    $chainDesc = "$($patchChain[0].FromTag) -> " + (($patchChain | ForEach-Object { $_.ToTag }) -join ' -> ')
+    $totalChainSize = ($patchChain | Measure-Object -Property Size -Sum).Sum
+    Write-Host ("  patch  : {0} hops ({1:N1} MB): {2}" -f $patchChain.Count, ($totalChainSize / 1MB), $chainDesc)
+} elseif ($patchChain -and $patchChain.Count -eq 1) {
+    Write-Host ("  patch  : {0} ({1:N1} MB)" -f $patchChain[0].Name, ($patchChain[0].Size / 1MB))
+} elseif ($patchAsset) {
+    Write-Host ("  patch  : {0} ({1:N1} MB)" -f $patchAsset.name, ($patchAsset.size / 1MB))
+} else {
+    Write-Host "  patch  : not found (will fallback to setup)"
+}
 Write-Host ("  setup  : {0}" -f ($(if ($setupAsset) { "{0} ({1:N1} MB)" -f $setupAsset.name, ($setupAsset.size / 1MB) } else { 'not published' })))
 
 if ($DryRun) {
@@ -150,19 +190,85 @@ if ($sumsAsset) {
 
 # ---------------------------------------------------------------- update
 $updated = $false
-if ($Mode -in @('patch', 'auto') -and $patchAsset) {
-    Write-Step "incremental patch"
+if ($Mode -in @('patch', 'auto') -and (($patchChain -and $patchChain.Count -gt 0) -or $patchAsset)) {
+    $chainToApply = if ($patchChain -and $patchChain.Count -gt 0) {
+        $patchChain
+    } else {
+        @([pscustomobject]@{
+            FromTag = $currentTag
+            ToTag   = $Tag
+            Name    = $patchAsset.name
+            Asset   = $patchAsset
+            Size    = $patchAsset.size
+        })
+    }
+
+    $chainCount = $chainToApply.Count
+    Write-Step "incremental patch (chain: $chainCount hop(s))"
+
+    $chainBackupDir = Join-Path $InstallDir '.chain-backup'
+    if (Test-Path -LiteralPath $chainBackupDir) {
+        Remove-Item -LiteralPath $chainBackupDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
     try {
-        $patchZip = Save-Asset -Asset $patchAsset -DestDir $destDir -Sums $sums
-        $applyArgs = @{ InstallDir = $InstallDir; PatchZip = $patchZip; ExpectedToTag = $Tag }
-        $patchSha = $sums[$patchAsset.name]
-        if ($patchSha) { $applyArgs.ExpectedSha256 = $patchSha }
-        & (Join-Path $PSScriptRoot 'apply-delta.ps1') @applyArgs
+        for ($i = 0; $i -lt $chainCount; $i++) {
+            $hop = $chainToApply[$i]
+            $stepNum = $i + 1
+            if ($chainCount -gt 1) {
+                Write-Host ("  step [{0}/{1}]: {2} -> {3} ({4})" -f $stepNum, $chainCount, $hop.FromTag, $hop.ToTag, $hop.Name) -ForegroundColor Cyan
+            } else {
+                Write-Host ("  applying {0} ..." -f $hop.Name) -ForegroundColor Cyan
+            }
+            $patchZip = Save-Asset -Asset $hop.Asset -DestDir $destDir -Sums $sums
+            $applyArgs = @{
+                InstallDir      = $InstallDir
+                PatchZip        = $patchZip
+                ExpectedFromTag = $hop.FromTag
+                ExpectedToTag   = $hop.ToTag
+                ChainBackupDir  = $chainBackupDir
+            }
+            $patchSha = if ($sums) { $sums[$hop.Name] } else { $null }
+            if ($patchSha) { $applyArgs.ExpectedSha256 = $patchSha }
+            & (Join-Path $PSScriptRoot 'apply-delta.ps1') @applyArgs
+        }
         $updated = $true
-        Write-Host "  patch applied" -ForegroundColor Green
+        Remove-Item -LiteralPath $chainBackupDir -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Host "  patch chain applied successfully" -ForegroundColor Green
     }
     catch {
         Write-Host ("  patch failed: {0}" -f $_.Exception.Message) -ForegroundColor Yellow
+        if (Test-Path -LiteralPath $chainBackupDir) {
+            Write-Host "  rolling back installation to initial state before patch chain..." -ForegroundColor Yellow
+            try {
+                $addedRecordFile = Join-Path $chainBackupDir '.added-files.txt'
+                if (Test-Path -LiteralPath $addedRecordFile) {
+                    $addedLines = [System.IO.File]::ReadAllLines($addedRecordFile, [System.Text.UTF8Encoding]::new($false))
+                    foreach ($line in $addedLines) {
+                        if ($line -and $line.Trim()) {
+                            $targetAdded = Join-Path $InstallDir $line.Trim()
+                            Remove-Item -LiteralPath $targetAdded -Force -ErrorAction SilentlyContinue
+                        }
+                    }
+                }
+                $backedFiles = Get-ChildItem -LiteralPath $chainBackupDir -Recurse -File
+                foreach ($bf in $backedFiles) {
+                    if ($bf.Name -eq '.added-files.txt') { continue }
+                    $rel = $bf.FullName.Substring($chainBackupDir.Length).TrimStart('\', '/')
+                    $dest = Join-Path $InstallDir $rel
+                    $destParent = Split-Path $dest -Parent
+                    if (-not (Test-Path -LiteralPath $destParent)) {
+                        New-Item -ItemType Directory -Path $destParent -Force | Out-Null
+                    }
+                    Copy-Item -LiteralPath $bf.FullName -Destination $dest -Force
+                }
+                if ($currentTag) {
+                    Set-Content -LiteralPath (Join-Path $InstallDir '.mobius-installed-tag') -Value $currentTag -Encoding UTF8 -Force
+                }
+            } finally {
+                Remove-Item -LiteralPath $chainBackupDir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
         if ($Mode -eq 'patch') { throw }
         Write-Host '  falling back to the official installer' -ForegroundColor Yellow
     }

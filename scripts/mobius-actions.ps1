@@ -115,6 +115,105 @@ function Invoke-GhApi {
     return Invoke-RestMethod @params
 }
 
+function Find-MobiusPatchChain {
+    param(
+        [array]$Releases,
+        [string]$FromTag,
+        [string]$ToTag,
+        [string]$Arch = 'x64'
+    )
+
+    if (-not $Releases -or -not $FromTag -or -not $ToTag -or ($FromTag -eq $ToTag)) {
+        return $null
+    }
+
+    $cleanTag = {
+        param([string]$t)
+        if (-not $t) { return '' }
+        $s = $t.Trim()
+        if ($s -notmatch '^v' -and $s -match '^\d') { return "v$s" }
+        return $s
+    }
+
+    $targetFrom = & $cleanTag $FromTag
+    $targetTo = & $cleanTag $ToTag
+
+    $adj = @{}
+    $patchPattern = "^Mobius-Patch-(.+)-to-(.+)-win32-$([regex]::Escape($Arch))\.zip$"
+
+    foreach ($rel in $Releases) {
+        if (-not $rel.assets) { continue }
+        foreach ($asset in $rel.assets) {
+            if ($asset.name -match $patchPattern) {
+                $rawFrom = $Matches[1].Trim()
+                $rawTo = $Matches[2].Trim()
+                $normFrom = & $cleanTag $rawFrom
+                $normTo = & $cleanTag $rawTo
+
+                if (-not $adj.ContainsKey($normFrom)) {
+                    $adj[$normFrom] = [System.Collections.ArrayList]::new()
+                }
+
+                # Avoid duplicate edges to the same destination
+                $alreadyExists = $false
+                foreach ($existing in $adj[$normFrom]) {
+                    if ($existing.ToTagNorm -ieq $normTo) {
+                        $alreadyExists = $true
+                        break
+                    }
+                }
+                if (-not $alreadyExists) {
+                    $null = $adj[$normFrom].Add([pscustomobject]@{
+                        FromTag     = $rawFrom
+                        ToTag       = $rawTo
+                        FromTagNorm = $normFrom
+                        ToTagNorm   = $normTo
+                        Name        = $asset.name
+                        Asset       = $asset
+                        Release     = $rel
+                        Size        = if ($asset.size) { [long]$asset.size } else { 0 }
+                        Url         = if ($asset.browser_download_url) { $asset.browser_download_url } else { $asset.url }
+                    })
+                }
+            }
+        }
+    }
+
+    if (-not $adj.ContainsKey($targetFrom)) {
+        return $null
+    }
+
+    # BFS for shortest patch path (fewest hops)
+    $queue = [System.Collections.Queue]::new()
+    $visited = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+
+    $queue.Enqueue([pscustomobject]@{ Current = $targetFrom; Path = @() })
+    $null = $visited.Add($targetFrom)
+
+    while ($queue.Count -gt 0) {
+        $node = $queue.Dequeue()
+        $curr = $node.Current
+        $path = $node.Path
+
+        if ($adj.ContainsKey($curr)) {
+            foreach ($edge in $adj[$curr]) {
+                if ($edge.ToTagNorm -ieq $targetTo) {
+                    return ,@($path + @($edge))
+                }
+                if (-not $visited.Contains($edge.ToTagNorm)) {
+                    $null = $visited.Add($edge.ToTagNorm)
+                    $queue.Enqueue([pscustomobject]@{
+                        Current = $edge.ToTagNorm
+                        Path    = @($path + @($edge))
+                    })
+                }
+            }
+        }
+    }
+
+    return $null
+}
+
 function Show-Auth {
     $user = Invoke-GhApi -Path '/user'
     Write-Host ("Authenticated as {0}" -f $user.login) -ForegroundColor Green

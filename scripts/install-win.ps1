@@ -105,12 +105,166 @@ function Get-FastFileSha256 {
     }
 }
 
+function Parse-MobiusVersion {
+    param([string]$Tag)
+    if (-not $Tag) { return $null }
+    $s = $Tag.Trim()
+    if ($s -match '^v?(\d+(\.\d+)*)') {
+        $digits = $Matches[1].Split('.')
+        $major = if ($digits.Count -gt 0) { [int]$digits[0] } else { 0 }
+        $minor = if ($digits.Count -gt 1) { [int]$digits[1] } else { 0 }
+        $build = if ($digits.Count -gt 2) { [int]$digits[2] } else { 0 }
+        $revision = if ($digits.Count -gt 3) { [int]$digits[3] } else { 0 }
+        return [version]::new($major, $minor, $build, $revision)
+    }
+    return $null
+}
+
+function Compare-MobiusVersion {
+    param([string]$VerA, [string]$VerB)
+    $va = Parse-MobiusVersion $VerA
+    $vb = Parse-MobiusVersion $VerB
+    if ($va -and $vb) {
+        return $va.CompareTo($vb)
+    }
+    return [string]::Compare($VerA, $VerB, [System.StringComparison]::OrdinalIgnoreCase)
+}
+
+function Resolve-MobiusLatestTagFromRedirect {
+    param([string]$Repo)
+    $latestUrl = "https://github.com/$Repo/releases/latest"
+    $redirectUrl = $null
+    foreach ($method in @('HEAD', 'GET')) {
+        try {
+            $req = [System.Net.HttpWebRequest]::Create($latestUrl)
+            $req.Method = $method
+            $req.AllowAutoRedirect = $false
+            $req.UserAgent = "Mobius-Installer-Windows"
+            $req.Timeout = 10000
+            $resp = $req.GetResponse()
+            $redirectUrl = $resp.Headers["Location"]
+            $resp.Close()
+            if ($redirectUrl) { break }
+        } catch [System.Net.WebException] {
+            if ($_.Response -and $_.Response.Headers["Location"]) {
+                $redirectUrl = $_.Response.Headers["Location"]
+                $_.Response.Close()
+                break
+            }
+        } catch {}
+    }
+    if ($redirectUrl -and ($redirectUrl -match '/tag/([^/?#]+)')) {
+        return $Matches[1].Trim()
+    }
+    return $null
+}
+
+function Find-MobiusPatchChain {
+    param(
+        [array]$Releases,
+        [string]$FromTag,
+        [string]$ToTag,
+        [string]$Arch = 'x64'
+    )
+
+    if (-not $Releases -or -not $FromTag -or -not $ToTag -or ($FromTag -eq $ToTag)) {
+        return $null
+    }
+
+    $cleanTag = {
+        param([string]$t)
+        if (-not $t) { return '' }
+        $s = $t.Trim()
+        if ($s -notmatch '^v' -and $s -match '^\d') { return "v$s" }
+        return $s
+    }
+
+    $targetFrom = & $cleanTag $FromTag
+    $targetTo = & $cleanTag $ToTag
+
+    $adj = @{}
+    $patchPattern = "^Mobius-Patch-(.+)-to-(.+)-win32-$([regex]::Escape($Arch))\.zip$"
+
+    foreach ($rel in $Releases) {
+        if (-not $rel.assets) { continue }
+        foreach ($asset in $rel.assets) {
+            if ($asset.name -match $patchPattern) {
+                $rawFrom = $Matches[1].Trim()
+                $rawTo = $Matches[2].Trim()
+                $normFrom = & $cleanTag $rawFrom
+                $normTo = & $cleanTag $rawTo
+
+                if (-not $adj.ContainsKey($normFrom)) {
+                    $adj[$normFrom] = [System.Collections.ArrayList]::new()
+                }
+
+                # Avoid duplicate edges to the same destination
+                $alreadyExists = $false
+                foreach ($existing in $adj[$normFrom]) {
+                    if ($existing.ToTagNorm -ieq $normTo) {
+                        $alreadyExists = $true
+                        break
+                    }
+                }
+                if (-not $alreadyExists) {
+                    $null = $adj[$normFrom].Add([pscustomobject]@{
+                        FromTag     = $rawFrom
+                        ToTag       = $rawTo
+                        FromTagNorm = $normFrom
+                        ToTagNorm   = $normTo
+                        Name        = $asset.name
+                        Asset       = $asset
+                        Release     = $rel
+                        Size        = if ($asset.size) { [long]$asset.size } else { 0 }
+                        Url         = if ($asset.browser_download_url) { $asset.browser_download_url } else { $asset.url }
+                    })
+                }
+            }
+        }
+    }
+
+    if (-not $adj.ContainsKey($targetFrom)) {
+        return $null
+    }
+
+    # BFS for shortest patch path (fewest hops)
+    $queue = [System.Collections.Queue]::new()
+    $visited = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+
+    $queue.Enqueue([pscustomobject]@{ Current = $targetFrom; Path = @() })
+    $null = $visited.Add($targetFrom)
+
+    while ($queue.Count -gt 0) {
+        $node = $queue.Dequeue()
+        $curr = $node.Current
+        $path = $node.Path
+
+        if ($adj.ContainsKey($curr)) {
+            foreach ($edge in $adj[$curr]) {
+                if ($edge.ToTagNorm -ieq $targetTo) {
+                    return ,@($path + @($edge))
+                }
+                if (-not $visited.Contains($edge.ToTagNorm)) {
+                    $null = $visited.Add($edge.ToTagNorm)
+                    $queue.Enqueue([pscustomobject]@{
+                        Current = $edge.ToTagNorm
+                        Path    = @($path + @($edge))
+                    })
+                }
+            }
+        }
+    }
+
+    return $null
+}
+
 function Apply-MobiusPatch {
     param(
         [string]$InstallDir,
         [string]$PatchZip,
         [string]$ExpectedFromTag,
-        [string]$ExpectedToTag
+        [string]$ExpectedToTag,
+        [string]$ChainBackupDir = ''
     )
 
     try {
@@ -176,6 +330,17 @@ function Apply-MobiusPatch {
         }
         New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
 
+        if ($ChainBackupDir) {
+            if (-not (Test-Path -LiteralPath $ChainBackupDir)) {
+                New-Item -ItemType Directory -Path $ChainBackupDir -Force | Out-Null
+            }
+            $tagFile = Join-Path $InstallDir '.mobius-installed-tag'
+            $tagBackup = Join-Path $ChainBackupDir '.mobius-installed-tag'
+            if ((Test-Path -LiteralPath $tagFile) -and (-not (Test-Path -LiteralPath $tagBackup))) {
+                Copy-Item -LiteralPath $tagFile -Destination $tagBackup -Force
+            }
+        }
+
         foreach ($rel in $fileKeys) {
             $destFile = Join-Path $InstallDir ($rel.Replace('/', '\'))
             if (Test-Path -LiteralPath $destFile) {
@@ -183,6 +348,15 @@ function Apply-MobiusPatch {
                 $backupParent = Split-Path $backupFile -Parent
                 if (-not (Test-Path $backupParent)) { New-Item -ItemType Directory -Path $backupParent -Force | Out-Null }
                 Copy-Item -LiteralPath $destFile -Destination $backupFile -Force
+
+                if ($ChainBackupDir) {
+                    $chainBackupFile = Join-Path $ChainBackupDir ($rel.Replace('/', '\'))
+                    if (-not (Test-Path -LiteralPath $chainBackupFile)) {
+                        $chainBackupParent = Split-Path $chainBackupFile -Parent
+                        if (-not (Test-Path $chainBackupParent)) { New-Item -ItemType Directory -Path $chainBackupParent -Force | Out-Null }
+                        Copy-Item -LiteralPath $destFile -Destination $chainBackupFile -Force
+                    }
+                }
             }
         }
 
@@ -194,7 +368,24 @@ function Apply-MobiusPatch {
                     $backupParent = Split-Path $backupFile -Parent
                     if (-not (Test-Path $backupParent)) { New-Item -ItemType Directory -Path $backupParent -Force | Out-Null }
                     Copy-Item -LiteralPath $destFile -Destination $backupFile -Force
+
+                    if ($ChainBackupDir) {
+                        $chainBackupFile = Join-Path $ChainBackupDir ($rel.Replace('/', '\'))
+                        if (-not (Test-Path -LiteralPath $chainBackupFile)) {
+                            $chainBackupParent = Split-Path $chainBackupFile -Parent
+                            if (-not (Test-Path $chainBackupParent)) { New-Item -ItemType Directory -Path $chainBackupParent -Force | Out-Null }
+                            Copy-Item -LiteralPath $destFile -Destination $chainBackupFile -Force
+                        }
+                    }
                 }
+            }
+        }
+
+        if ($ChainBackupDir -and $manifest.added) {
+            $addedRecordFile = Join-Path $ChainBackupDir '.added-files.txt'
+            foreach ($rel in $manifest.added) {
+                $line = $rel.Replace('/', '\')
+                [System.IO.File]::AppendAllText($addedRecordFile, $line + [Environment]::NewLine, [System.Text.UTF8Encoding]::new($false))
             }
         }
 
@@ -344,12 +535,14 @@ $latestTag = $null
 $latestReleaseName = $null
 $latestPublishDate = $null
 $patchAsset = $null
+$patchChain = $null
 $fullAsset = $null
 
+# First try: Query GitHub REST API (returns full release metadata and asset lists)
 try {
     $headers = @{ "User-Agent" = "Mobius-Installer-Windows" }
     $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases" -Headers $headers -UseBasicParsing
-    foreach ($rel in $releases) {
+    foreach ($rel in @($releases)) {
         $asset = $rel.assets | Where-Object { $_.name -like "Mobius-Setup-*-win32-$arch.exe" -or $_.name -like "MobiusSetup.exe" } | Select-Object -First 1
         if ($asset) {
             $fullAsset = $asset
@@ -357,27 +550,69 @@ try {
             $latestTag = $rel.tag_name
             $latestReleaseName = $rel.name
             $latestPublishDate = $rel.published_at
-
-            if ($rel.assets -and $installedTag -and $latestTag) {
-                # Never download a patch for another base or destination release.
-                # Unknown/generic patch names use the full installer instead.
-                $patchAsset = $rel.assets | Where-Object {
-                    $_.name -eq "Mobius-Patch-$installedTag-to-$latestTag-win32-$arch.zip"
-                } | Select-Object -First 1
-            }
             break
         }
     }
+
+    if ($installedTag -and $latestTag -and ($installedTag -ne $latestTag)) {
+        $foundChain = Find-MobiusPatchChain -Releases @($releases) -FromTag $installedTag -ToTag $latestTag -Arch $arch
+        if ($foundChain) {
+            $patchChain = @($foundChain)
+            if ($patchChain.Count -gt 0) {
+                $patchAsset = $patchChain[0].Asset
+            }
+        }
+    }
 } catch {
-    # If GitHub API is rate-limited, fallback gracefully
+    # GitHub REST API may fail due to rate limiting (60 req/hr unauthenticated) or network blocks
 }
 
-if (-not $downloadUrl) {
-    # Default fallback to latest known release with Windows binary
-    $latestTag = "v1.0.2"
-    $latestReleaseName = "v1.0.2"
-    $latestPublishDate = "2026-09-13T06:11:02Z"
-    $downloadUrl = "https://github.com/$Repo/releases/download/v1.0.2/MobiusSetup.exe"
+# Second try: Bypass API rate limits by resolving 302 redirect from https://github.com/$Repo/releases/latest
+if (-not $latestTag -or -not $downloadUrl) {
+    $redirectTag = Resolve-MobiusLatestTagFromRedirect -Repo $Repo
+    if ($redirectTag) {
+        $latestTag = $redirectTag
+        $latestReleaseName = $redirectTag
+        $downloadUrl = "https://github.com/$Repo/releases/download/$latestTag/MobiusSetup.exe"
+        Write-Host "Resolved latest release via GitHub redirect: $latestTag" -ForegroundColor DarkGray
+
+        # Check if direct 1-hop patch asset is reachable without API quota
+        if ($installedTag -and ($installedTag -ne $latestTag)) {
+            $candPatchName = "Mobius-Patch-$installedTag-to-$latestTag-win32-$arch.zip"
+            $candPatchUrl = "https://github.com/$Repo/releases/download/$latestTag/$candPatchName"
+            try {
+                $pReq = [System.Net.HttpWebRequest]::Create($candPatchUrl)
+                $pReq.Method = "HEAD"
+                $pReq.UserAgent = "Mobius-Installer-Windows"
+                $pReq.Timeout = 5000
+                $pResp = $pReq.GetResponse()
+                $pResp.Close()
+                $patchChain = @([pscustomobject]@{
+                    FromTag     = $installedTag
+                    ToTag       = $latestTag
+                    FromTagNorm = $installedTag
+                    ToTagNorm   = $latestTag
+                    Name        = $candPatchName
+                    Asset       = $null
+                    Release     = $null
+                    Size        = 0
+                    Url         = $candPatchUrl
+                })
+            } catch {}
+        }
+    }
+}
+
+# If both API and redirect failed: abort safely, NEVER fallback to an obsolete hardcoded release!
+if (-not $latestTag -or -not $downloadUrl) {
+    Write-Warning "Could not fetch latest release information from GitHub (network timeout or rate limit)."
+    Write-Warning "Update aborted to prevent downloading an incorrect or obsolete version."
+    if ($isInstalled) {
+        Write-Host "Mobius remains installed at: $installedPath" -ForegroundColor DarkGray
+        Write-Host "Current version: $verDisplay $tagDisplay" -ForegroundColor DarkGray
+    }
+    $global:LASTEXITCODE = 1
+    return
 }
 
 Write-Host "Remote Release: $latestTag" -ForegroundColor DarkGray
@@ -395,11 +630,21 @@ if (-not $isInstalled) {
     $updateReason = "ForceReinstall"
 } else {
     # Compare installed tag vs latest release tag
-    if ($installedTag -and $latestTag -and ($installedTag -eq $latestTag)) {
-        $needsUpdate = $false
-    } elseif ($installedTag -and $latestTag -and ($installedTag -ne $latestTag)) {
-        $needsUpdate = $true
-        $updateReason = "TagMismatch ($installedTag -> $latestTag)"
+    if ($installedTag -and $latestTag) {
+        $comp = Compare-MobiusVersion $latestTag $installedTag
+        if ($comp -lt 0) {
+            # Remote version is older than installed version -> Protect against downgrade
+            $needsUpdate = $false
+            $updateReason = "DowngradeProtected ($installedTag -> $latestTag)"
+            Write-Host "`n[Downgrade Protected] Installed version ($installedTag) is newer than remote release ($latestTag)." -ForegroundColor Yellow
+            Write-Host "Update skipped to prevent downgrade. Set `$env:MOBIUS_FORCE=1 if you intended to reinstall." -ForegroundColor DarkGray
+        } elseif ($comp -eq 0) {
+            $needsUpdate = $false
+            $updateReason = "AlreadyLatest ($installedTag)"
+        } else {
+            $needsUpdate = $true
+            $updateReason = "NewerReleaseFound ($installedTag -> $latestTag)"
+        }
     } else {
         # No tag recorded previously. Compare dates if available.
         if ($installedDate -and $latestPublishDate) {
@@ -434,6 +679,15 @@ if ($CheckOnly) {
 
 # If already up-to-date and not forced, exit gracefully without redundant multi-GB downloads
 if (-not $needsUpdate) {
+    if ($updateReason -like "DowngradeProtected*") {
+        Write-Host "`n[Current Version Retained] Mobius is at $installedTag (remote is $latestTag)." -ForegroundColor Yellow
+        Write-Host "  - Install path: $installedPath" -ForegroundColor DarkGray
+        Write-Host "  - To force reinstallation, run:" -ForegroundColor DarkGray
+        Write-Host "    `$env:MOBIUS_FORCE=1; irm https://raw.githubusercontent.com/$Repo/main/scripts/install-win.ps1 | iex`n" -ForegroundColor Yellow
+        Complete-MobiusInstall -Title 'Mobius is up to date' -Message "Installed: $installedTag. Remote: $latestTag. Downgrade prevented." -InstallPath $installedPath
+        return
+    }
+
     Write-Host "`n[Up to Date] Mobius is already current ($latestTag)." -ForegroundColor Green
     Write-Host "  - Install path: $installedPath" -ForegroundColor DarkGray
     Write-Host "  - To force reinstallation or repair, run:" -ForegroundColor DarkGray
@@ -473,35 +727,108 @@ $targetDir = if ($installedPath) { $installedPath } else { Join-Path $env:LOCALA
 $mobiusExe = Join-Path $targetDir 'Mobius.exe'
 
 $usedIncremental = $false
-if ($isInstalled -and (-not $Force) -and $patchAsset) {
-    Write-Host "`n[Incremental Update Available] Found differential patch: $($patchAsset.name)" -ForegroundColor Green
-    $patchSizeMb = if ($patchAsset.size) { [math]::Round($patchAsset.size / 1MB, 2) } else { 0 }
+if ($isInstalled -and (-not $Force) -and $patchChain -and ($patchChain.Count -gt 0)) {
+    $chainHopCount = $patchChain.Count
+    $totalPatchSize = 0
+    foreach ($p in $patchChain) {
+        if ($p.Size) { $totalPatchSize += $p.Size }
+    }
+    $patchSizeMb = [math]::Round($totalPatchSize / 1MB, 2)
     $fullSizeMb = if ($fullAsset -and $fullAsset.size) { [math]::Round($fullAsset.size / 1MB, 2) } else { 0 }
-    if ($patchSizeMb -gt 0 -and $fullSizeMb -gt 0) {
-        $savedPct = [math]::Round((1 - ($patchSizeMb / $fullSizeMb)) * 100, 1)
-        Write-Host "  - Patch Download Size: $patchSizeMb MB" -ForegroundColor Cyan
-        Write-Host "  - Full Installer Size: $fullSizeMb MB" -ForegroundColor DarkGray
-        Write-Host "  - Bandwidth Saved    : ~$savedPct%!" -ForegroundColor Green
+
+    if ($chainHopCount -gt 1) {
+        $pathDesc = "$($patchChain[0].FromTag) -> " + (($patchChain | ForEach-Object { $_.ToTag }) -join ' -> ')
+        Write-Host "`n[Incremental Update Available] Found chained differential patches ($chainHopCount hops):" -ForegroundColor Green
+        Write-Host "  - Patch Chain        : $pathDesc" -ForegroundColor Cyan
     } else {
-        Write-Host "  - Patch Download Size: $patchSizeMb MB" -ForegroundColor Cyan
+        Write-Host "`n[Incremental Update Available] Found differential patch: $($patchChain[0].Name)" -ForegroundColor Green
     }
 
-    $tempPatch = Join-Path $env:TEMP ("MobiusPatch-{0}.zip" -f [guid]::NewGuid())
-    try {
-        Write-Host "Downloading Mobius incremental update ($latestTag)..." -ForegroundColor Cyan
-        Invoke-WebRequest -Uri $patchAsset.browser_download_url -OutFile $tempPatch -UseBasicParsing
+    if ($patchSizeMb -gt 0 -and $fullSizeMb -gt 0) {
+        $savedPct = [math]::Round((1 - ($patchSizeMb / $fullSizeMb)) * 100, 1)
+        Write-Host "  - Total Download Size: $patchSizeMb MB" -ForegroundColor Cyan
+        Write-Host "  - Full Installer Size: $fullSizeMb MB" -ForegroundColor DarkGray
+        Write-Host "  - Bandwidth Saved    : ~$savedPct%!" -ForegroundColor Green
+    } elseif ($patchSizeMb -gt 0) {
+        Write-Host "  - Total Download Size: $patchSizeMb MB" -ForegroundColor Cyan
+    }
 
-        $patchSuccess = Apply-MobiusPatch -InstallDir $targetDir -PatchZip $tempPatch -ExpectedFromTag $installedTag -ExpectedToTag $latestTag
-        if ($patchSuccess) {
-            $usedIncremental = $true
-            Write-Host "Incremental update applied successfully!" -ForegroundColor Green
-        } else {
-            Write-Warning "Incremental update could not be applied cleanly. Falling back to full installer..."
+    $chainBackupDir = Join-Path $targetDir '.chain-backup'
+    if (Test-Path -LiteralPath $chainBackupDir) {
+        Remove-Item -LiteralPath $chainBackupDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    try {
+        for ($i = 0; $i -lt $patchChain.Count; $i++) {
+            $hop = $patchChain[$i]
+            $hopNumber = $i + 1
+            if ($chainHopCount -gt 1) {
+                Write-Host "`nApplying patch step [$hopNumber/$chainHopCount]: $($hop.FromTag) -> $($hop.ToTag)..." -ForegroundColor Cyan
+            } else {
+                Write-Host "Downloading Mobius incremental update ($($hop.ToTag))..." -ForegroundColor Cyan
+            }
+
+            $tempPatch = Join-Path $env:TEMP ("MobiusPatch-{0}.zip" -f [guid]::NewGuid())
+            try {
+                Invoke-WebRequest -Uri $hop.Url -OutFile $tempPatch -UseBasicParsing
+
+                $stepSuccess = Apply-MobiusPatch `
+                    -InstallDir $targetDir `
+                    -PatchZip $tempPatch `
+                    -ExpectedFromTag $hop.FromTag `
+                    -ExpectedToTag $hop.ToTag `
+                    -ChainBackupDir $chainBackupDir
+
+                if (-not $stepSuccess) {
+                    throw "Step $hopNumber ($($hop.FromTag) -> $($hop.ToTag)) failed to apply cleanly."
+                }
+            } finally {
+                Remove-Item -LiteralPath $tempPatch -Force -ErrorAction SilentlyContinue
+            }
         }
+
+        # All hops succeeded
+        $usedIncremental = $true
+        Set-Content -LiteralPath (Join-Path $targetDir '.mobius-installed-tag') -Value $latestTag -Encoding UTF8 -Force
+        Remove-Item -LiteralPath $chainBackupDir -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Host "`nIncremental update applied successfully!" -ForegroundColor Green
     } catch {
-        Write-Warning "Incremental update failed: $($_.Exception.Message). Falling back to full installer..."
-    } finally {
-        Remove-Item -LiteralPath $tempPatch -Force -ErrorAction SilentlyContinue
+        Write-Warning "Incremental update failed: $($_.Exception.Message)"
+        if (Test-Path -LiteralPath $chainBackupDir) {
+            Write-Host 'Restoring files from safety backup...' -ForegroundColor Yellow
+            try {
+                $addedRecordFile = Join-Path $chainBackupDir '.added-files.txt'
+                if (Test-Path -LiteralPath $addedRecordFile) {
+                    $addedLines = [System.IO.File]::ReadAllLines($addedRecordFile, [System.Text.UTF8Encoding]::new($false))
+                    foreach ($line in $addedLines) {
+                        if ($line -and $line.Trim()) {
+                            $targetAdded = Join-Path $targetDir $line.Trim()
+                            Remove-Item -LiteralPath $targetAdded -Force -ErrorAction SilentlyContinue
+                        }
+                    }
+                }
+
+                $backedFiles = Get-ChildItem -LiteralPath $chainBackupDir -Recurse -File
+                foreach ($bf in $backedFiles) {
+                    if ($bf.Name -eq '.added-files.txt') { continue }
+                    $rel = $bf.FullName.Substring($chainBackupDir.Length).TrimStart('\', '/')
+                    $dest = Join-Path $targetDir $rel
+                    $destParent = Split-Path $dest -Parent
+                    if (-not (Test-Path -LiteralPath $destParent)) {
+                        New-Item -ItemType Directory -Path $destParent -Force | Out-Null
+                    }
+                    Copy-Item -LiteralPath $bf.FullName -Destination $dest -Force
+                }
+                if ($installedTag) {
+                    Set-Content -LiteralPath (Join-Path $targetDir '.mobius-installed-tag') -Value $installedTag -Encoding UTF8 -Force
+                }
+            } catch {
+                Write-Warning "Safety rollback error: $($_.Exception.Message)"
+            } finally {
+                Remove-Item -LiteralPath $chainBackupDir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+        Write-Warning "Falling back to full installer..."
     }
 }
 

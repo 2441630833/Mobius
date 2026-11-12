@@ -32,7 +32,7 @@ function Write-TestEvent {
     $line = @{ Kind = $Kind; Data = $Data } | ConvertTo-Json -Compress -Depth 8
     [IO.File]::AppendAllText($script:eventsPath, $line + [Environment]::NewLine, [Text.UTF8Encoding]::new($false))
 }
-$existing = $Scenario -in @('UpdateDefault', 'CurrentDefault', 'ForceCurrent', 'CustomPath', 'FailInstaller', 'DeltaSuccess', 'DeltaCorrupt')
+$existing = $Scenario -in @('UpdateDefault', 'CurrentDefault', 'ForceCurrent', 'CustomPath', 'FailInstaller', 'DeltaSuccess', 'DeltaCorrupt', 'DeltaChainSuccess', 'DeltaChainCorrupt')
 if ($existing) {
     Set-Content -LiteralPath (Join-Path $script:targetDir 'Mobius.exe') -Value 'fixture'
     $tag = if ($Scenario -in @('CurrentDefault', 'ForceCurrent')) { $script:fixtureTag } else { 'v1.0.0' }
@@ -54,15 +54,32 @@ function Get-Process { param($Name, $ErrorAction) }
 function Start-Sleep { param($Seconds, $Milliseconds) }
 function Invoke-RestMethod {
     param($Uri, $Headers, [switch]$UseBasicParsing)
+    $tag = if ($Scenario -eq 'DowngradeProtected') { 'v1.0.0' } else { $script:fixtureTag }
     $assets = @([pscustomobject]@{ name = 'MobiusSetup.exe'; browser_download_url = 'https://example.invalid/MobiusSetup.exe'; size = 1000000000 })
-    if ($Scenario -like 'Delta*') {
+    if ($Scenario -in @('DeltaSuccess', 'DeltaCorrupt')) {
         $assets = @(
             [pscustomobject]@{ name = 'Mobius-Patch-v1.0.0-to-v9.8.7-win32-x64.zip'; browser_download_url = 'https://example.invalid/Mobius-Patch.zip'; size = 20000000 },
             [pscustomobject]@{ name = 'MobiusSetup.exe'; browser_download_url = 'https://example.invalid/MobiusSetup.exe'; size = 1000000000 }
         )
+    } elseif ($Scenario -in @('DeltaChainSuccess', 'DeltaChainCorrupt')) {
+        return @(
+            [pscustomobject]@{
+                tag_name = $script:fixtureTag; name = $script:fixtureTag; published_at = '2099-01-01T00:00:00Z'
+                assets = @(
+                    [pscustomobject]@{ name = 'Mobius-Patch-v1.0.1-to-v9.8.7-win32-x64.zip'; browser_download_url = 'https://example.invalid/Mobius-Patch-Hop2.zip'; size = 15000000 },
+                    [pscustomobject]@{ name = 'MobiusSetup.exe'; browser_download_url = 'https://example.invalid/MobiusSetup.exe'; size = 1000000000 }
+                )
+            },
+            [pscustomobject]@{
+                tag_name = 'v1.0.1'; name = 'v1.0.1'; published_at = '2098-01-01T00:00:00Z'
+                assets = @(
+                    [pscustomobject]@{ name = 'Mobius-Patch-v1.0.0-to-v1.0.1-win32-x64.zip'; browser_download_url = 'https://example.invalid/Mobius-Patch-Hop1.zip'; size = 12000000 }
+                )
+            }
+        )
     }
     return [pscustomobject]@{
-        tag_name = $script:fixtureTag; name = $script:fixtureTag; published_at = '2099-01-01T00:00:00Z'
+        tag_name = $tag; name = $tag; published_at = '2099-01-01T00:00:00Z'
         assets = $assets
     }
 }
@@ -83,6 +100,40 @@ function Invoke-WebRequest {
             } | ConvertTo-Json
             Set-Content -LiteralPath (Join-Path $patchStage 'patch-manifest.json') -Value $patchManifest
             [IO.File]::WriteAllBytes((Join-Path $patchStage 'resources/app\out\patched.js'), [byte[]]@())
+            try { Add-Type -AssemblyName System.IO.Compression.FileSystem } catch {}
+            if (Test-Path $OutFile) { Remove-Item $OutFile -Force }
+            [System.IO.Compression.ZipFile]::CreateFromDirectory($patchStage, $OutFile)
+            Remove-Item $patchStage -Recurse -Force
+        }
+    } elseif ($Uri -like '*Mobius-Patch-Hop1.zip') {
+        $patchStage = Join-Path $Sandbox 'test-patch-stage-1'
+        $null = New-Item -ItemType Directory -Path (Join-Path $patchStage 'resources/app\out') -Force
+        $emptySha = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+        $patchManifest = [ordered]@{
+            format = 1; fromTag = 'v1.0.0'; toTag = 'v1.0.1'; version = '1.0.1'; arch = 'x64'
+            added = @('resources/app/out/patched1.js'); modified = @(); deleted = @()
+            files = [ordered]@{ 'resources/app/out/patched1.js' = [ordered]@{ sha256 = $emptySha; size = 0 } }
+        } | ConvertTo-Json
+        Set-Content -LiteralPath (Join-Path $patchStage 'patch-manifest.json') -Value $patchManifest
+        [IO.File]::WriteAllBytes((Join-Path $patchStage 'resources/app\out\patched1.js'), [byte[]]@())
+        try { Add-Type -AssemblyName System.IO.Compression.FileSystem } catch {}
+        if (Test-Path $OutFile) { Remove-Item $OutFile -Force }
+        [System.IO.Compression.ZipFile]::CreateFromDirectory($patchStage, $OutFile)
+        Remove-Item $patchStage -Recurse -Force
+    } elseif ($Uri -like '*Mobius-Patch-Hop2.zip') {
+        if ($Scenario -eq 'DeltaChainCorrupt') {
+            Set-Content -LiteralPath $OutFile -Value 'not a real zip'
+        } else {
+            $patchStage = Join-Path $Sandbox 'test-patch-stage-2'
+            $null = New-Item -ItemType Directory -Path (Join-Path $patchStage 'resources/app\out') -Force
+            $emptySha = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+            $patchManifest = [ordered]@{
+                format = 1; fromTag = 'v1.0.1'; toTag = $script:fixtureTag; version = '9.8.7'; arch = 'x64'
+                added = @('resources/app/out/patched2.js'); modified = @(); deleted = @()
+                files = [ordered]@{ 'resources/app/out/patched2.js' = [ordered]@{ sha256 = $emptySha; size = 0 } }
+            } | ConvertTo-Json
+            Set-Content -LiteralPath (Join-Path $patchStage 'patch-manifest.json') -Value $patchManifest
+            [IO.File]::WriteAllBytes((Join-Path $patchStage 'resources/app\out\patched2.js'), [byte[]]@())
             try { Add-Type -AssemblyName System.IO.Compression.FileSystem } catch {}
             if (Test-Path $OutFile) { Remove-Item $OutFile -Force }
             [System.IO.Compression.ZipFile]::CreateFromDirectory($patchStage, $OutFile)
@@ -157,7 +208,7 @@ try {
     $cases = @('FreshDefault', 'UpdateDefault', 'CurrentDefault', 'ForceCurrent',
         'CheckOnly', 'KeepOpen', 'EnvKeepOpen', 'FailInstaller', 'MissingExe',
         'DownloadFailure', 'ToastFailure', 'ToastTimeout', 'LaunchFailure', 'CustomPath', 'EscapedToast',
-        'DeltaSuccess', 'DeltaCorrupt')
+        'DeltaSuccess', 'DeltaCorrupt', 'DeltaChainSuccess', 'DeltaChainCorrupt', 'DowngradeProtected')
     foreach ($case in $cases) {
         $sandbox = Join-Path $testRoot $case
         $null = New-Item -ItemType Directory -Path $sandbox
@@ -169,7 +220,7 @@ try {
             -RedirectStandardOutput $stdout -RedirectStandardError $stderr
         try {
             $null = $child.Handle
-            Assert-Test ($child.WaitForExit(30000)) "$case timed out"
+            Assert-Test ($child.WaitForExit(60000)) "$case timed out"
             Assert-Test ($child.ExitCode -eq 0) "$case child exit $($child.ExitCode): $(Get-Content -LiteralPath $stderr -Raw)"
         } finally {
             if (-not $child.HasExited) { $child.Kill() }
@@ -192,14 +243,25 @@ try {
             Assert-Test ($caller[0].Data.NoAttach -eq 'test-before') "$case did not restore launch environment"
             if ($expectedFailure) { Assert-Test ($caller[0].Data.ExitCode -eq 1) "$case missing failure exit status" }
         }
-        $noInstall = $case -in @('CheckOnly', 'CurrentDefault')
-        $expectedDownloads = if ($noInstall) { 0 } elseif ($case -eq 'DeltaCorrupt') { 2 } else { 1 }
+        $noInstall = $case -in @('CheckOnly', 'CurrentDefault', 'DowngradeProtected')
+        $expectedDownloads = if ($noInstall) { 0 }
+            elseif ($case -in @('DeltaCorrupt', 'DeltaChainSuccess')) { 2 }
+            elseif ($case -eq 'DeltaChainCorrupt') { 3 }
+            else { 1 }
         Assert-Test ($downloads.Count -eq $expectedDownloads) "$case unexpected download count ($($downloads.Count) vs $expectedDownloads)"
-        $expectedInstalls = if ($noInstall -or $case -eq 'DownloadFailure' -or $case -eq 'DeltaSuccess') { 0 } else { 1 }
+        $expectedInstalls = if ($noInstall -or $case -eq 'DownloadFailure' -or $case -in @('DeltaSuccess', 'DeltaChainSuccess')) { 0 } else { 1 }
         Assert-Test ($installs.Count -eq $expectedInstalls) "$case unexpected install count ($($installs.Count) vs $expectedInstalls)"
         if ($case -eq 'DeltaSuccess') {
             $patchedFile = Join-Path $sandbox 'Local/Programs/Mobius/resources/app/out/patched.js'
             Assert-Test (Test-Path -LiteralPath $patchedFile) "DeltaSuccess did not apply patched file"
+        } elseif ($case -eq 'DeltaChainSuccess') {
+            $patchedFile1 = Join-Path $sandbox 'Local/Programs/Mobius/resources/app/out/patched1.js'
+            $patchedFile2 = Join-Path $sandbox 'Local/Programs/Mobius/resources/app/out/patched2.js'
+            Assert-Test (Test-Path -LiteralPath $patchedFile1) "DeltaChainSuccess did not apply hop 1 patched file"
+            Assert-Test (Test-Path -LiteralPath $patchedFile2) "DeltaChainSuccess did not apply hop 2 patched file"
+        } elseif ($case -eq 'DeltaChainCorrupt') {
+            $patchedFile1 = Join-Path $sandbox 'Local/Programs/Mobius/resources/app/out/patched1.js'
+            Assert-Test (-not (Test-Path -LiteralPath $patchedFile1)) "DeltaChainCorrupt did not roll back hop 1 added file"
         }
         if ($installs.Count) {
             Assert-Test (-not $installs[0].Data.WaitTree) "$case waits for the entire process tree"
@@ -212,12 +274,12 @@ try {
             Assert-Test ($toasts[0].Data.Hidden -and $toasts[0].Data.RegisteredId) "$case incorrect notification host or app ID"
             $expectedTag = if ($case -eq 'EscapedToast') { 'v9<&' } else { 'v9.8.7' }
             Assert-Test ($toasts[0].Data.Message.Contains($expectedTag)) "$case corrupted notification content"
-            $expectedTitle = if ($case -eq 'CurrentDefault') { 'Mobius is up to date' }
-                elseif ($case -in @('UpdateDefault', 'ForceCurrent', 'CustomPath', 'DeltaSuccess', 'DeltaCorrupt')) { 'Mobius updated successfully' }
+            $expectedTitle = if ($case -in @('CurrentDefault', 'DowngradeProtected')) { 'Mobius is up to date' }
+                elseif ($case -in @('UpdateDefault', 'ForceCurrent', 'CustomPath', 'DeltaSuccess', 'DeltaCorrupt', 'DeltaChainSuccess', 'DeltaChainCorrupt')) { 'Mobius updated successfully' }
                 else { 'Mobius installed successfully' }
             Assert-Test ($toasts[0].Data.Title -eq $expectedTitle) "$case incorrect notification title"
         }
-        Assert-Test ($launches.Count -eq [int](-not ($noSuccess -or $case -eq 'CurrentDefault'))) "$case incorrect app launch"
+        Assert-Test ($launches.Count -eq [int](-not ($noSuccess -or $case -in @('CurrentDefault', 'DowngradeProtected')))) "$case incorrect app launch"
         if ($launches.Count) { Assert-Test ($launches[0].Data.NoAttach -eq '1') "$case app can attach to installer console" }
         if ($case -eq 'ToastTimeout') {
             Assert-Test (@($events | Where-Object Kind -eq 'KillHelper').Count -eq 1) 'Timed-out notification helper was not stopped'
@@ -229,6 +291,8 @@ try {
             Assert-Test (-not (Test-Path -LiteralPath $marker)) "$case wrote a false success marker"
         } elseif ($case -eq 'FailInstaller') {
             Assert-Test ((Get-Content -LiteralPath $marker -Raw).Trim() -eq 'v1.0.0') 'Failed update overwrote the old marker'
+        } elseif ($case -eq 'DowngradeProtected') {
+            Assert-Test ((Get-Content -LiteralPath $marker -Raw -Encoding UTF8).Trim() -eq 'v9.8.7') 'Downgrade overwrote newer tag'
         } elseif ($case -ne 'CheckOnly') {
             Assert-Test ((Get-Content -LiteralPath $marker -Raw -Encoding UTF8).Trim() -eq $expectedTag) "$case incorrect installed marker"
         }

@@ -13,8 +13,10 @@ param(
     [string]$PatchZip,
 
     [string]$ExpectedToTag = "",
+    [string]$ExpectedFromTag = "",
     [string]$ExpectedSha256 = "",
-    [switch]$KeepBackup = $false
+    [switch]$KeepBackup = $false,
+    [string]$ChainBackupDir = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -100,6 +102,16 @@ try {
         throw "Patch target version mismatch! Manifest toTag is '$toTag', expected '$ExpectedToTag'"
     }
 
+    if ($ExpectedFromTag -and $fromTag) {
+        $fromAllowed = $false
+        if ($fromTag -eq '*' -or ($fromTag -is [array] -and $fromTag -contains $ExpectedFromTag) -or ($fromTag -eq $ExpectedFromTag)) {
+            $fromAllowed = $true
+        }
+        if (-not $fromAllowed) {
+            throw "Patch source version mismatch! Manifest fromTag is '$fromTag', expected '$ExpectedFromTag'"
+        }
+    }
+
     Write-Host "Patch Details:" -ForegroundColor DarkGray
     Write-Host "  From Version : $fromTag" -ForegroundColor DarkGray
     Write-Host "  To Version   : $toTag" -ForegroundColor DarkGray
@@ -134,6 +146,17 @@ try {
     }
     New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
 
+    if ($ChainBackupDir) {
+        if (-not (Test-Path -LiteralPath $ChainBackupDir)) {
+            New-Item -ItemType Directory -Path $ChainBackupDir -Force | Out-Null
+        }
+        $tagFile = Join-Path $InstallDir '.mobius-installed-tag'
+        $tagBackup = Join-Path $ChainBackupDir '.mobius-installed-tag'
+        if ((Test-Path -LiteralPath $tagFile) -and (-not (Test-Path -LiteralPath $tagBackup))) {
+            Copy-Item -LiteralPath $tagFile -Destination $tagBackup -Force
+        }
+    }
+
     $backupList = @()
     foreach ($rel in $fileKeys) {
         $destFile = Join-Path $InstallDir ($rel.Replace('/', '\'))
@@ -144,6 +167,15 @@ try {
                 New-Item -ItemType Directory -Path $backupFileDir -Force | Out-Null
             }
             Copy-Item -LiteralPath $destFile -Destination $backupFile -Force
+
+            if ($ChainBackupDir) {
+                $chainBackupFile = Join-Path $ChainBackupDir ($rel.Replace('/', '\'))
+                if (-not (Test-Path -LiteralPath $chainBackupFile)) {
+                    $chainBackupParent = Split-Path $chainBackupFile -Parent
+                    if (-not (Test-Path $chainBackupParent)) { New-Item -ItemType Directory -Path $chainBackupParent -Force | Out-Null }
+                    Copy-Item -LiteralPath $destFile -Destination $chainBackupFile -Force
+                }
+            }
             $backupList += $rel
         }
     }
@@ -158,8 +190,25 @@ try {
                     New-Item -ItemType Directory -Path $backupFileDir -Force | Out-Null
                 }
                 Copy-Item -LiteralPath $destFile -Destination $backupFile -Force
+
+                if ($ChainBackupDir) {
+                    $chainBackupFile = Join-Path $ChainBackupDir ($rel.Replace('/', '\'))
+                    if (-not (Test-Path -LiteralPath $chainBackupFile)) {
+                        $chainBackupParent = Split-Path $chainBackupFile -Parent
+                        if (-not (Test-Path $chainBackupParent)) { New-Item -ItemType Directory -Path $chainBackupParent -Force | Out-Null }
+                        Copy-Item -LiteralPath $destFile -Destination $chainBackupFile -Force
+                    }
+                }
                 $backupList += $rel
             }
+        }
+    }
+
+    if ($ChainBackupDir -and $patchManifest.added) {
+        $addedRecordFile = Join-Path $ChainBackupDir '.added-files.txt'
+        foreach ($rel in $patchManifest.added) {
+            $line = $rel.Replace('/', '\')
+            [System.IO.File]::AppendAllText($addedRecordFile, $line + [Environment]::NewLine, [System.Text.UTF8Encoding]::new($false))
         }
     }
     Write-Host "Safety backup created ($($backupList.Count) existing files backed up)." -ForegroundColor DarkGray
