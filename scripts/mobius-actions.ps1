@@ -22,7 +22,7 @@
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet('Auth', 'Status', 'Dispatch', 'Wait', 'Download')]
+    [ValidateSet('Auth', 'Status', 'Dispatch', 'Wait', 'Download', 'Releases', 'DownloadRelease', 'RunInfo')]
     [string]$Action = 'Status',
 
     [string]$Repo = '2441630833/Mobius',
@@ -32,9 +32,10 @@ param(
     [string]$Arch = 'x64',
     [string]$InstallerTarget = 'user',
     [switch]$SystemTarget,
-    [int]$RunId = 0,
+    [long]$RunId = 0,
     [int]$TimeoutMinutes = 110,
-    [string]$OutDir = ''
+    [string]$OutDir = '',
+    [string]$AssetPattern = ''
 )
 
 Set-StrictMode -Version Latest
@@ -139,7 +140,7 @@ function Start-Dispatch {
 }
 
 function Resolve-Run {
-    param([int]$Id)
+    param([long]$Id)
     if ($Id -gt 0) { return Invoke-GhApi -Path "/repos/$Repo/actions/runs/$Id" }
     $runs = Invoke-GhApi -Path "/repos/$Repo/actions/workflows/$Workflow/runs?per_page=1"
     if ($runs.total_count -eq 0) { throw 'No run found.' }
@@ -173,7 +174,7 @@ function Wait-Run {
 }
 
 function Save-Artifacts {
-    param([int]$Id)
+    param([long]$Id)
     $run = Resolve-Run -Id $Id
     if ($run.status -ne 'completed') { throw 'Run has not completed yet.' }
     if (-not $OutDir) { $OutDir = Join-Path (Get-Location) ("dist/actions-$($run.id)") }
@@ -194,10 +195,81 @@ function Save-Artifacts {
 
 if ($SystemTarget) { $InstallerTarget = 'system' }
 
-switch ($Action) {
-    'Auth' { Show-Auth }
-    'Status' { Show-Status }
-    'Dispatch' { Show-Auth; Start-Dispatch }
-    'Wait' { [void](Wait-Run) }
-    'Download' { Save-Artifacts -Id $RunId }
+function Show-Releases {    param([int]$Limit = 5)
+    $rels = Invoke-GhApi -Path "/repos/$Repo/releases?per_page=$Limit"
+    if (-not $rels -or $rels.Count -eq 0) { Write-Host 'No releases.'; return }
+    foreach ($r in $rels) {
+        Write-Host ("{0}  '{1}'  draft={2}  published={3}" -f $r.tag_name, $r.name, $r.draft, $r.published_at) -ForegroundColor Cyan
+        foreach ($a in $r.assets) {
+            Write-Host ("    {0}  {1:N1} MB  {2}" -f $a.name, ($a.size / 1MB), $a.browser_download_url)
+        }
+    }
+}
+
+function Save-ReleaseAssets {
+    if (-not $ReleaseTag) { throw 'Specify -ReleaseTag (e.g. v1.0.23).' }
+    $rel = Invoke-GhApi -Path "/repos/$Repo/releases/tags/$ReleaseTag"
+    $pattern = if ($AssetPattern) { $AssetPattern } else { '*win32-x64*' }
+    $assets = @($rel.assets | Where-Object { $_.name -like $pattern })
+    if ($assets.Count -eq 0) { throw ("No asset matching '{0}' in release {1}." -f $pattern, $ReleaseTag) }
+    $sumsAsset = $rel.assets | Where-Object { $_.name -eq 'SHA256SUMS.txt' } | Select-Object -First 1
+    if (-not $OutDir) { $OutDir = Join-Path (Get-Location) ("dist/release-$ReleaseTag") }
+    New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
+    $token = Get-GitHubToken
+    $headers = @{ Authorization = "Bearer $token"; 'User-Agent' = 'mobius-actions-helper' }
+    $sums = @{}
+    if ($sumsAsset) {
+        $sumsPath = Join-Path $OutDir 'SHA256SUMS.txt'
+        Invoke-WebRequest -Uri $sumsAsset.url -Headers ($headers + @{ Accept = 'application/octet-stream' }) -OutFile $sumsPath -UseBasicParsing
+        foreach ($line in Get-Content -LiteralPath $sumsPath) {
+            if ($line -match '^([0-9a-fA-F]{64})\s+\*?(.+)$') { $sums[$Matches[2].Trim()] = $Matches[1].ToLower() }
+        }
+    }
+    foreach ($a in $assets) {
+        $dest = Join-Path $OutDir $a.name
+        Write-Host ("Downloading {0} ({1:N1} MB) ..." -f $a.name, ($a.size / 1MB))
+        Invoke-WebRequest -Uri $a.url -Headers ($headers + @{ Accept = 'application/octet-stream' }) -OutFile $dest -UseBasicParsing
+        $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $dest).Hash.ToLower()
+        $expected = $sums[$a.name]
+        if ($expected) {
+            if ($expected -eq $hash) { Write-Host '  sha256 OK' -ForegroundColor Green }
+            else { Write-Host ("  sha256 MISMATCH expected {0} got {1}" -f $expected, $hash) -ForegroundColor Red }
+        }
+        else { Write-Host ("  sha256 {0} (no manifest entry)" -f $hash) }
+    }
+    Get-ChildItem -LiteralPath $OutDir -File | Select-Object Name, @{ n = 'MB'; e = { [math]::Round($_.Length / 1MB, 2) } } | Format-Table -AutoSize
+}
+
+function Show-RunInfo {
+    $run = Resolve-Run -Id $RunId
+    Write-Host ("run {0}  {1}/{2}  event={3}  branch={4}" -f $run.id, $run.status, $run.conclusion, $run.event, $run.head_branch) -ForegroundColor Cyan
+    Write-Host ("  started {0}  updated {1}  {2}" -f $run.run_started_at, $run.updated_at, $run.html_url)
+    $jobs = Invoke-GhApi -Path "/repos/$Repo/actions/runs/$($run.id)/jobs"
+    foreach ($j in $jobs.jobs) {
+        Write-Host ("  job {0}: {1}/{2}  ({3})" -f $j.name, $j.status, $j.conclusion, $j.started_at)
+        foreach ($s in $j.steps) {
+            $mark = switch ($s.conclusion) {
+                'success' { '[ok]  ' }
+                'failure' { '[FAIL]' }
+                'skipped' { '[--]  ' }
+                default { if ($s.status -eq 'in_progress') { '[..]  ' } else { '[    ]' } }
+            }
+            Write-Host ("    {0} {1}" -f $mark, $s.name)
+        }
+    }
+}
+
+# Only execute an action when the script is invoked directly; dot-sourcing exposes
+# the helper functions to other scripts (e.g. update-mobius-local.ps1).
+if ($MyInvocation.InvocationName -ne '.') {
+    switch ($Action) {
+        'Auth' { Show-Auth }
+        'Status' { Show-Status }
+        'Dispatch' { Show-Auth; Start-Dispatch }
+        'Wait' { [void](Wait-Run) }
+        'Download' { Save-Artifacts -Id $RunId }
+        'Releases' { Show-Releases }
+        'DownloadRelease' { Save-ReleaseAssets }
+        'RunInfo' { Show-RunInfo }
+    }
 }
