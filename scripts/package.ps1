@@ -1,4 +1,4 @@
-# Mobius -- one-click Windows Inno Setup installer (GLM-OCR ONNX + MiniLM; Ollama optional)
+# Mobius -- one-click Windows Inno Setup installer (MiniLM; Ollama optional)
 # Default: user-setup (no admin). Pass -Target system for Program Files install.
 param(
     [ValidateSet("x64", "arm64")]
@@ -76,10 +76,10 @@ if ($env:SKIP_VSCODE_BUILD -eq "1" -or $env:SKIP_CONTINUE_BUILD -eq "1") {
     Write-Host "  - Continue / workbench runtime code changes are NOT included." -ForegroundColor Red
     Write-Host "  - After editing Continue / workbench, use:" -ForegroundColor Red
     Write-Host "      npm run package:fast     (rebuild Continue + VS Code client + setup)" -ForegroundColor Yellow
-    Write-Host "      npm run package         (same + verify GLM-OCR ONNX)" -ForegroundColor Yellow
+    Write-Host "      npm run package         (full build + setup)" -ForegroundColor Yellow
     Write-Host "  - package:setup is for re-wrapping an already-updated VSCode-win32-* tree only.`n" -ForegroundColor Gray
 }
-Write-Host "This builds a full Windows installer with bundled GLM-OCR ONNX + MiniLM (~2 GB model weights in Continue extension).`n" -ForegroundColor Yellow
+Write-Host "This builds a full Windows installer with bundled MiniLM embeddings.`n" -ForegroundColor Yellow
 
 . "$Root\scripts\vs-dev-env.ps1"
 Ensure-BuildSourceVersion -RepoDir $VsCodeDir | Out-Null
@@ -120,11 +120,6 @@ if ($env:SKIP_CONTINUE_BUILD -ne "1") {
         Write-Host "[FAIL] Missing Continue build: $extJs" -ForegroundColor Red
         exit 1
     }
-}
-
-Invoke-Step "Verify packaged GLM-OCR runtime and local model" {
-    node "$Root\continue\extensions\vscode\scripts\package-glm-ocr.js" --verify "win32-$Arch"
-    if ($LASTEXITCODE -ne 0) { throw "Packaged GLM-OCR is incomplete" }
 }
 
 if ($env:SKIP_VSCODE_BUILD -ne "1") {
@@ -256,7 +251,7 @@ if ($binFiles.Count -gt 0) {
     Write-Host "Size     : $([math]::Round($totalBytes / 1GB, 2)) GB (single setup.exe)" -ForegroundColor White
 }
 Write-Host "Version  : $version" -ForegroundColor White
-$includes = "Mobius IDE + Continue + GLM-OCR ONNX + MiniLM ONNX"
+$includes = "Mobius IDE + Continue + MiniLM ONNX"
 if ($env:SKIP_CHIP_STAGE -ne "1") { $includes += " + chip-design (FPGA sampler)" }
 if ($env:SKIP_GODOT_STAGE -ne "1") {
     $includes += " + Godot Game mode (game-dev"

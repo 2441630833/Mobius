@@ -2,31 +2,23 @@
 /*
  * mobius-vision-hotpatch.js
  *
- * Local hot patch for the Mobius/Continue image-capability gate.
+ * Local hot patch for the Mobius/Continue image-capability gate, OCR retirement,
+ * and removing the robot icon from the chat input area.
  *
- * Symptom it removes:
- *   "Enable local OCR for this model? <model> does not declare image support."
- *   -> "Image request cancelled. Enable local OCR or select a multimodal
- *      model before resending."
- *
- * Root cause (compiled build, out/vs/workbench/workbench.desktop.main.js):
- *
- *   let gx = this._languageModelsService.lookupLanguageModel(n),
- *       Hr  = gx?.capabilities?.vision === !0;              // <- gating flag
- *   if (!Hr && Cg.length > 0) { warn(...); return {}; }
- *   if (!await WHo(zl.length, Hr, gx?.family ?? n, ...)) { ...cancel... }
- *
- *   WHo() shows the local-OCR dialog and, on cancel, the request is dropped,
- *   so images never reach a model that is perfectly able to read them.
- *
- * The patch forces Hr = true, which makes Mobius take the real image path
- * (VUo -> image parts) instead of the OCR-text fallback.
+ * Changes:
+ *   1) agent-host model capability: vision defaults to true
+ *   2) chat agent vision gate: Hr defaults to true
+ *   3) chat model metadata helper: jOo returns true
+ *   4) chat agent OCR consent prompt: WHo returns true (no OCR prompt/detour)
+ *   5) chat input toolbar: remove local OCR toggle button
+ *   6) chat input mode picker: remove robot icon from Agent mode
+ *   7) CSS: hide .codicon-mobius-mode-agent
+ *   8) delete local GLM-OCR ONNX model weights
  *
  * Usage:
  *   node scripts/mobius-vision-hotpatch.js            # report only
  *   node scripts/mobius-vision-hotpatch.js --apply    # patch installs
  *   node scripts/mobius-vision-hotpatch.js --restore  # undo
- *   node scripts/mobius-vision-hotpatch.js --apply --root "D:\\Mobius"
  */
 'use strict';
 
@@ -35,17 +27,10 @@ const os = require('os');
 const path = require('path');
 
 const WORKBENCH = path.join('resources', 'app', 'out', 'vs', 'workbench', 'workbench.desktop.main.js');
+const WORKBENCH_CSS = path.join('resources', 'app', 'out', 'vs', 'workbench', 'workbench.desktop.main.css');
 
 const MARKER = 'MOBIUS_VISION_PATCH';
 
-/*
- * Each entry is [anchor, replacement]. Anchors are taken verbatim from the
- * shipped workbench bundle (no whitespace to guess).
- *
- *  1) agent-host model list: the server flag defaulted to "no vision".
- *  2) chat agent gate:      Hr (supportsVision) drives the OCR dialog.
- *  3) chat model helper:    Joo() feeds the UI/attachment capability checks.
- */
 const PATCHES = [
     {
         name: 'agent-host model capability',
@@ -61,6 +46,21 @@ const PATCHES = [
         name: 'chat model metadata helper',
         from: 'function jOo(s){return s?.metadata.capabilities?.vision??!1}',
         to: 'function jOo(s){return!0/*MOBIUS_VISION_PATCH*/}',
+    },
+    {
+        name: 'chat agent OCR consent prompt (always allow vision)',
+        from: 'async function WHo(s,i,e,t,o,n){return n.isCancellationRequested?!1:!s||i||t.getValue(BH)===!0?!0:!(await o.confirm({message:d(11297,null),detail:d(11296,null,e),primaryButton:d(11295,null),cancelButton:d(11294,null)})).confirmed||n.isCancellationRequested?!1:(await t.updateValue(BH,!0,2),!n.isCancellationRequested)}',
+        to: 'async function WHo(){return!0/*MOBIUS_VISION_PATCH*/}',
+    },
+    {
+        name: 'chat input menu: remove OCR toolbar button',
+        from: 'menu:[{id:A.ChatInput,group:"navigation",order:5,when:x.and(oe.location.isEqualTo("panel"),oe.inQuickChat.negate())},{id:A.ChatExecute,group:"navigation",order:3,when:x.and(oe.location.isEqualTo("panel"),x.or(oe.inQuickChat,oe.location.isEqualTo("editor")))}]',
+        to: 'menu:[]/*MOBIUS_VISION_PATCH*/',
+    },
+    {
+        name: 'chat input mode picker: remove robot icon from Agent mode',
+        from: 'function gpt(s){return l1i(s)?nLn:d1i(s)?rLn:u1i(s)?sLn:LQt(s)?JFo:s.icon.get()??JFo}',
+        to: 'function gpt(s){return l1i(s)?nLn:d1i(s)?rLn:u1i(s)?sLn:void 0/*MOBIUS_VISION_PATCH*/}',
     },
 ];
 
@@ -86,7 +86,6 @@ function candidateRoots() {
         }
     }
 
-    // repo build outputs (gulp vscode-win32-x64 etc.)
     const repo = path.resolve(__dirname, '..');
     for (const e of fs.readdirSync(repo, { withFileTypes: true })) {
         if (!e.isDirectory() || !/win32/i.test(e.name)) continue;
@@ -105,35 +104,58 @@ function state(file) {
     const text = fs.readFileSync(file, 'utf8');
     return {
         text,
-        hasPatched: text.includes(MARKER),
-        counts: PATCHES.map((p) => count(text, p.from)),
+        counts: PATCHES.map((p) => {
+            if (text.includes(p.to)) return 'patched';
+            return count(text, p.from);
+        }),
     };
 }
 
 function patch(file) {
-    const { text, hasPatched, counts } = state(file);
-    if (hasPatched) return ['already patched'];
+    let out = fs.readFileSync(file, 'utf8');
+    const log = [];
+    let modified = false;
 
-    for (let i = 0; i < PATCHES.length; i++) {
-        if (counts[i] !== 1) {
-            return [
-                `ABORT: anchor "${PATCHES[i].name}" matched ${counts[i]}x (expected 1) - build version differs`,
-            ];
+    for (const p of PATCHES) {
+        if (out.includes(p.to)) {
+            log.push(`already patched: ${p.name}`);
+            continue;
+        }
+        const c = count(out, p.from);
+        if (c === 1) {
+            out = out.replace(p.from, p.to);
+            log.push(`patched: ${p.name}`);
+            modified = true;
+        } else {
+            log.push(`skip / anchor not found (${c}x): ${p.name}`);
         }
     }
 
-    const backup = file + '.bak-vision';
-    if (!fs.existsSync(backup)) fs.copyFileSync(file, backup);
-
-    let out = text;
-    const log = [];
-    for (const p of PATCHES) {
-        out = out.replace(p.from, p.to);
-        log.push(`patched: ${p.name}`);
+    if (modified) {
+        const backup = file + '.bak-vision';
+        if (!fs.existsSync(backup)) fs.copyFileSync(file, backup);
+        fs.writeFileSync(file, out, 'utf8');
     }
-
-    fs.writeFileSync(file, out, 'utf8');
     return log;
+}
+
+function patchCss(cssFile) {
+    if (!fs.existsSync(cssFile)) return [];
+    let out = fs.readFileSync(cssFile, 'utf8');
+    const marker = '/*MOBIUS_HIDE_ROBOT*/';
+    if (out.includes(marker)) return ['CSS already patched (robot hidden)'];
+    const rule = '\n.monaco-workbench .codicon.codicon-mobius-mode-agent{display:none!important}/*MOBIUS_HIDE_ROBOT*/\n';
+    fs.writeFileSync(cssFile, out + rule, 'utf8');
+    return ['patched CSS: hide robot icon'];
+}
+
+function cleanModels(root) {
+    const p = path.join(root, 'resources', 'app', 'extensions', 'continue', 'models', 'onnx-community');
+    if (fs.existsSync(p)) {
+        fs.rmSync(p, { recursive: true, force: true });
+        return ['removed GLM-OCR model weights: ' + p];
+    }
+    return [];
 }
 
 function unpatch(file) {
@@ -150,9 +172,9 @@ if (roots.length === 0) {
     process.exit(2);
 }
 
-let failures = 0;
 for (const root of roots) {
     const file = path.join(root, WORKBENCH);
+    const cssFile = path.join(root, WORKBENCH_CSS);
     console.log(`=== ${root}`);
     if (!fs.existsSync(file)) {
         console.log('    workbench bundle missing - skipped');
@@ -164,14 +186,14 @@ for (const root of roots) {
     }
     if (apply) {
         const lines = patch(file);
-        if (lines.some((l) => l.startsWith('ABORT'))) failures++;
         lines.forEach((l) => console.log('    ' + l));
+        const cssLines = patchCss(cssFile);
+        cssLines.forEach((l) => console.log('    ' + l));
+        const modelLines = cleanModels(root);
+        modelLines.forEach((l) => console.log('    ' + l));
         continue;
     }
     const s = state(file);
     console.log(`    size    : ${(fs.statSync(file).size / 1024 / 1024).toFixed(1)} MB`);
-    console.log(`    patched : ${s.hasPatched}`);
-    PATCHES.forEach((p, i) => console.log(`    ${s.counts[i]}x      : ${p.name}`));
+    PATCHES.forEach((p, i) => console.log(`    status  : ${s.counts[i]} -> ${p.name}`));
 }
-
-if (failures) process.exit(1);

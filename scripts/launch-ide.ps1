@@ -1,4 +1,4 @@
-# Launch Mobius (VS Code fork)
+﻿# Launch Mobius (VS Code fork)
 $ErrorActionPreference = "Stop"
 try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false) } catch {}
 try { $OutputEncoding = [System.Text.UTF8Encoding]::new($false) } catch {}
@@ -34,7 +34,6 @@ if (-not (Test-Path $MainJs)) {
 if ($LASTEXITCODE) { exit $LASTEXITCODE }
 & "$Root\scripts\ensure-native-modules.ps1"
 if ($LASTEXITCODE) { exit $LASTEXITCODE }
-& "$Root\scripts\ensure-glm-ocr-onnx.ps1"
 & "$Root\scripts\ensure-minilm.ps1"
 if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
