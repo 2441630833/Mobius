@@ -18,6 +18,9 @@ const defaultPath = path.join(
 const target = process.argv[2] || defaultPath;
 const keys = [
 	'MOBIUS_VISION_PATCH',
+	'TIGNN_STRICT_VISION',
+	'TIGNN_ALLOW_UNKNOWN_VISION',
+	'supportsVision??!1',
 	'does not declare image support',
 	'Image request cancelled',
 	'Send Images Anyway',
