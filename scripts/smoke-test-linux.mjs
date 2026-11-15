@@ -6,9 +6,9 @@
 //   1. app starts, main workbench renders
 //   2. a stale `continue.webSearch.enabled: false` (left by older builds) is repaired on startup
 //   3. Agents window opens with a workspace + model (mock OpenAI-compatible server)
-//   4. Web Search chip renders "On", toggles Off/On and persists (when present)
-//   5. the model is offered search_web and no <web-search-disabled> hint is injected
-//   6. a search_web call is executed (not rejected as "disabled by the user"/"no network")
+//   4. the model is offered search_web and no <web-search-disabled> hint is injected
+//   5. a search_web call is executed (not rejected as "disabled by the user"/"no network")
+//   6. Web Search chip renders "On"; Off really stops search_web; On restores it; both persist
 import { chromium } from 'playwright-core';
 import { spawn } from 'child_process';
 import http from 'http'; import fs from 'fs'; import os from 'os'; import path from 'path';
@@ -110,20 +110,6 @@ let modelLabel = '';
 for (let i = 0; i < 40 && !/mock/.test(modelLabel); i++) { modelLabel = await agents.$eval('.model-picker-split', e => e.textContent.trim()).catch(() => ''); if (!/mock/.test(modelLabel)) await sleep(1000); }
 check('model from ~/.continue/config.yaml is loaded', /mock/.test(modelLabel), modelLabel);
 
-const chip = await agents.$('.action-label.chat-web-search-button');
-if (chip) {
-  const state = async () => ({ text: (await chip.textContent())?.trim(), cls: await chip.getAttribute('class') });
-  const s0 = await state();
-  check('Web Search chip shows On', /On/.test(s0.text) && /\bchecked\b/.test(s0.cls), `${s0.text} [${s0.cls}]`);
-  await chip.click(); await sleep(1500);
-  const s1 = await state();
-  check('chip click -> Off (persisted)', /Off/.test(s1.text) && readSetting() === false, `${s1.text} / setting=${JSON.stringify(readSetting())}`);
-  await chip.click(); await sleep(1500);
-  const s2 = await state();
-  check('chip click -> On (persisted)', /On/.test(s2.text) && readSetting() === true, `${s2.text} / setting=${JSON.stringify(readSetting())}`);
-} else {
-  console.log('INFO  Web Search chip not rendered in this window layout; skipping toggle UI checks');
-}
 await agents.screenshot({ path: path.join(OUT, '1-agents-ready.png') });
 
 await agents.click('.interactive-input-editor').catch(() => {});
@@ -139,6 +125,33 @@ check('search_web offered to the model', reqs.some(r => r.hasSearchTool), reqs.l
 check('no <web-search-disabled> hint injected', !reqs.some(r => r.disabledHint));
 const toolResult = (reqs.find(r => r.toolResults.length)?.toolResults || []).join(' ');
 check('search_web was executed, not rejected', !!toolResult && !/disabled by the user|no network connection detected/i.test(toolResult), toolResult.slice(0, 400) || 'no tool result came back');
+
+// --- Web Search chip (rendered once a session is active) ---
+const chip = agents.locator('.action-label.chat-web-search-button').first();
+let chipFound = false;
+for (let i = 0; i < 20 && !chipFound; i++) { chipFound = await chip.count() > 0; if (!chipFound) await sleep(1000); }
+check('Web Search chip is rendered in the session input', chipFound);
+if (chipFound) {
+  const state = async () => ({ text: (await chip.textContent())?.trim(), cls: await chip.getAttribute('class') });
+  const s0 = await state();
+  check('chip shows On and is clickable', /On/.test(s0.text) && /\bchecked\b/.test(s0.cls) && !/(^|\s)disabled(\s|$)/.test(s0.cls), `${s0.text} [${s0.cls}]`);
+  await chip.click(); await sleep(1500);
+  const s1 = await state();
+  check('chip click -> Off (persisted to settings.json)', /Off/.test(s1.text) && readSetting() === false, `${s1.text} / setting=${JSON.stringify(readSetting())}`);
+  // With search Off, a new request must not offer search_web and must carry the disabled hint.
+  const before = readReqs().length;
+  await agents.click('.interactive-input-editor').catch(() => {});
+  await agents.keyboard.type('Please search the latest Python release');
+  await agents.keyboard.press('Enter');
+  for (let i = 0; i < 60 && readReqs().length <= before; i++) await sleep(1000);
+  await sleep(5000);
+  const offReqs = readReqs().slice(before);
+  check('with chip Off the agent does not offer search_web', offReqs.length > 0 && !offReqs.some(r => r.hasSearchTool) && offReqs.some(r => r.disabledHint), `${offReqs.length} request(s)`);
+  await chip.click(); await sleep(1500);
+  const s2 = await state();
+  check('chip click -> On again (persisted)', /On/.test(s2.text) && readSetting() === true, `${s2.text} / setting=${JSON.stringify(readSetting())}`);
+  await agents.screenshot({ path: path.join(OUT, '3-chip.png') });
+}
 
 const fatal = errors.filter(e => !/ResizeObserver|Canceled|Found unexpected null/.test(e));
 if (fatal.length) console.log('INFO  renderer errors:', fatal.slice(0, 5).join(' | '));
