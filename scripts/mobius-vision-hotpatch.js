@@ -2,8 +2,7 @@
 /*
  * mobius-vision-hotpatch.js
  *
- * Local hot patch for the Mobius/Continue image-capability gate, OCR retirement,
- * and removing the robot icon from the chat input area.
+ * Local hot patch for the Mobius/Continue image-capability gate and OCR retirement.
  *
  * Changes:
  *   1) agent-host model capability: vision defaults to true
@@ -11,9 +10,8 @@
  *   3) chat model metadata helper: jOo returns true
  *   4) chat agent OCR consent prompt: WHo returns true (no OCR prompt/detour)
  *   5) chat input toolbar: remove local OCR toggle button
- *   6) chat input mode picker: remove robot icon from Agent mode
- *   7) CSS: hide .codicon-mobius-mode-agent
- *   8) delete local GLM-OCR ONNX model weights
+ *   6) delete local GLM-OCR ONNX model weights
+ *   (Robot icon for Agent mode is preserved)
  *
  * Usage:
  *   node scripts/mobius-vision-hotpatch.js            # report only
@@ -56,11 +54,6 @@ const PATCHES = [
         name: 'chat input menu: remove OCR toolbar button',
         from: 'menu:[{id:A.ChatInput,group:"navigation",order:5,when:x.and(oe.location.isEqualTo("panel"),oe.inQuickChat.negate())},{id:A.ChatExecute,group:"navigation",order:3,when:x.and(oe.location.isEqualTo("panel"),x.or(oe.inQuickChat,oe.location.isEqualTo("editor")))}]',
         to: 'menu:[]/*MOBIUS_VISION_PATCH*/',
-    },
-    {
-        name: 'chat input mode picker: remove robot icon from Agent mode',
-        from: 'function gpt(s){return l1i(s)?nLn:d1i(s)?rLn:u1i(s)?sLn:LQt(s)?JFo:s.icon.get()??JFo}',
-        to: 'function gpt(s){return l1i(s)?nLn:d1i(s)?rLn:u1i(s)?sLn:void 0/*MOBIUS_VISION_PATCH*/}',
     },
 ];
 
@@ -131,6 +124,12 @@ function patch(file) {
         }
     }
 
+    if (out.includes('void 0/*MOBIUS_VISION_PATCH*/')) {
+        out = out.replace('void 0/*MOBIUS_VISION_PATCH*/', 'LQt(s)?JFo:s.icon.get()??JFo');
+        log.push('restored: chat input mode picker robot icon');
+        modified = true;
+    }
+
     if (modified) {
         const backup = file + '.bak-vision';
         if (!fs.existsSync(backup)) fs.copyFileSync(file, backup);
@@ -143,10 +142,12 @@ function patchCss(cssFile) {
     if (!fs.existsSync(cssFile)) return [];
     let out = fs.readFileSync(cssFile, 'utf8');
     const marker = '/*MOBIUS_HIDE_ROBOT*/';
-    if (out.includes(marker)) return ['CSS already patched (robot hidden)'];
-    const rule = '\n.monaco-workbench .codicon.codicon-mobius-mode-agent{display:none!important}/*MOBIUS_HIDE_ROBOT*/\n';
-    fs.writeFileSync(cssFile, out + rule, 'utf8');
-    return ['patched CSS: hide robot icon'];
+    if (out.includes(marker)) {
+        out = out.replace(/\r?\n?\.monaco-workbench \.codicon\.codicon-mobius-mode-agent\{display:none!important\}\/\*MOBIUS_HIDE_ROBOT\*\/\r?\n?/g, '');
+        fs.writeFileSync(cssFile, out, 'utf8');
+        return ['restored CSS: unhide robot icon'];
+    }
+    return [];
 }
 
 function cleanModels(root) {
