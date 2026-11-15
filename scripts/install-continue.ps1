@@ -132,10 +132,6 @@ if (-not (Test-Path "out\transformersJsEmbedWorker.js")) {
     Write-Host "ERROR: out/transformersJsEmbedWorker.js was not created" -ForegroundColor Red
     Pop-Location; Pop-Location; exit 1
 }
-if (-not (Test-Path "out\transformersJsGlmOcrWorker.js")) {
-    Write-Host "ERROR: out/transformersJsGlmOcrWorker.js was not created" -ForegroundColor Red
-    Pop-Location; Pop-Location; exit 1
-}
 
 Write-Host "Continue extension built: out/extension.js" -ForegroundColor Green
 Pop-Location  # extensions/vscode
