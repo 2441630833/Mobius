@@ -1,0 +1,80 @@
+name: Smoke Test Linux Build
+
+# Launches a packaged Mobius Linux build on a fresh Ubuntu VM under Xvfb and
+# drives the real UI: window opens, stale web-search setting is repaired,
+# Web Search chip toggles On/Off and persists, no renderer errors.
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: 'Run ID of a "Build Ubuntu Linux" run whose mobius-ubuntu-x64 artifact to test'
+        required: true
+        type: string
+
+jobs:
+  smoke:
+    name: Smoke test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-22.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Checkout (smoke script only)
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/smoke-test-linux.mjs
+          sparse-checkout-cone-mode: false
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mobius-ubuntu-x64
+          path: dist
+          run-id: ${{ inputs.build_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install runtime dependencies
+        run: |
+          sudo apt-get update
+          # Ubuntu 24.04 renamed libasound2 -> libasound2t64
+          ASOUND=libasound2t64; apt-cache show libasound2t64 >/dev/null 2>&1 || ASOUND=libasound2
+          sudo apt-get install -y --no-install-recommends xvfb $ASOUND libgtk-3-0 libnss3 libgbm1 \
+            libxkbfile1 libsecret-1-0 libxss1 libxshmfence1 libdrm2 dbus-x11
+          cat /etc/os-release | head -2
+
+      - name: Install the .deb (verifies package metadata/deps on this release)
+        run: |
+          sudo apt-get install -y ./dist/mobius_*_amd64.deb
+          dpkg -s mobius | head -5
+          test -x /usr/share/mobius/mobius
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Install playwright-core
+        run: |
+          mkdir -p /tmp/smoke && cd /tmp/smoke && npm init -y >/dev/null && npm i playwright-core@1 >/dev/null
+          cp "$GITHUB_WORKSPACE/scripts/smoke-test-linux.mjs" /tmp/smoke/
+
+      - name: Run smoke test (installed .deb under Xvfb)
+        env:
+          SMOKE_OUT: ${{ runner.temp }}/smoke-out
+        run: |
+          mkdir -p "$SMOKE_OUT"
+          cd /tmp/smoke
+          xvfb-run -a -s "-screen 0 1600x1000x24" node smoke-test-linux.mjs /usr/share/mobius/mobius
+
+      - name: Upload screenshot and app log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-${{ matrix.os }}
+          path: ${{ runner.temp }}/smoke-out
+          if-no-files-found: ignore
